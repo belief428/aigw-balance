@@ -2,18 +2,23 @@ package aibalance
 
 import "github.com/belief428/aigw-balance/persist"
 
-type Archives []persist.Archive
+type Archives []persist.IArchive
 
-// Vertical 垂直计算
-func (this Archives) Vertical(mode int) (bool, float32) {
-	for _, v := range this {
+const (
+	// EnforcerModeForZHW 追回温
+	EnforcerModeForZHW = iota + 1
+)
+
+// vertical 垂直计算
+func (this *Enforcer) vertical() {
+	for _, v := range this.archive {
 		//v.GetBuild().GetArea()
 		v.GetRetTemp()
 	}
-	return false, 0
+	return
 }
 
-// Horizontal 水平计算
-func (this Archives) Horizontal(mode int) (bool, float32) {
-	return false, 0
+// horizontal 水平计算
+func (this *Enforcer) horizontal() {
+	return
 }
