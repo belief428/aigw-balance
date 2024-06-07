@@ -1,15 +1,17 @@
 package aibalance
 
+import "fmt"
+
 type Watcher struct {
-	calculateCallbackFunc func(kind int, value float32)
+	calculateCallbackFunc func(code string, kind int, value float32)
 	setParamsCallbackFunc func(params map[string]interface{})
 }
 
-func (this *Watcher) SetCalculateCallback(function func(kind int, value float32)) {
+func (this *Watcher) SetCalculateCallback(function func(code string, kind int, value float32)) {
 	this.calculateCallbackFunc = function
 }
 
-func (this *Watcher) GetCalculateCallback() func(kind int, value float32) {
+func (this *Watcher) GetCalculateCallback() func(code string, kind int, value float32) {
 	return this.calculateCallbackFunc
 }
 
@@ -22,5 +24,12 @@ func (this *Watcher) GetParamsCallback() func(params map[string]interface{}) {
 }
 
 func NewWatcher() *Watcher {
-	return &Watcher{}
+	return &Watcher{
+		calculateCallbackFunc: func(code string, kind int, value float32) {
+			fmt.Println("calculateCallbackFunc", " code：", code, " kind：", kind, " value：", value)
+		},
+		setParamsCallbackFunc: func(params map[string]interface{}) {
+			fmt.Println("setParamsCallbackFunc params：", params)
+		},
+	}
 }

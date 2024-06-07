@@ -1,5 +1,20 @@
 package persist
 
+type IGateway interface {
+	// SetCode 设置编号
+	SetCode(code string)
+	// GetCode 获取编号
+	GetCode() string
+	// SetHorizontalCount 设置水平平衡调控数
+	SetHorizontalCount(count int)
+	// GetHorizontalCount 获取水平平衡调控数
+	GetHorizontalCount() int
+	// SetVerticalCount 设置垂直平衡调控数
+	SetVerticalCount(count int)
+	// GetVerticalCount 获取垂直平衡调控数
+	GetVerticalCount() int
+}
+
 type IArchive interface {
 	// SetName 设置名称
 	SetName(name string)
