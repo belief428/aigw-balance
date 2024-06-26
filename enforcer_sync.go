@@ -10,62 +10,68 @@ const (
 	EnforcerModeForZHW = iota + 1
 )
 
-// vertical 垂直计算
-func (this *Enforcer) vertical() {
-	for _, v := range this.data {
+// calc
+// @Description: 平衡计算发起
+// @param mode 模式
+// @param data 数据
+// @param report 上报数
+// @param limit 最低限制百分比
+// @return bool
+// @return float32
+func calc(mode int, data []persist.IArchive, report, limit int) (bool, float32) {
+	var value float32
 
-		var value float32
+	_length := len(data)
 
-		_length := len(v.verticalArchive)
-
-		//this.infof()
-
-		// 根据总数，上报数量限制
-		if (_length/v.GetHorizontalCount())*100 < 100-13 {
-			goto LOOP
-		}
-		// 获取数值
-		for _, archive := range v.verticalArchive {
-			if this.mode == EnforcerModeForZHW {
-				value += archive.GetRetTemp()
-			}
-		}
-		if this.watcher.GetCalculateCallback() != nil {
-			this.watcher.GetCalculateCallback()(v.GetCode(), 1, value/float32(_length))
-		}
-	LOOP:
-		// 清空
-		v.verticalArchive = make([]persist.IArchive, 0)
+	if (_length/report)*100 < 100-limit {
+		return false, 0
 	}
-	return
+	if mode <= 0 {
+		return false, 0
+	}
+	// 获取数值
+	for _, v := range data {
+		if mode == EnforcerModeForZHW {
+			value += v.GetRetTemp()
+		}
+	}
+	return true, value / float32(_length)
 }
 
 // horizontal 水平计算
 func (this *Enforcer) horizontal() {
 	for _, v := range this.data {
 
-		var value float32
+		validate, value := calc(this.mode, v.build, v.GetBuildCount(), 13)
 
-		_length := len(v.horizontalArchive)
-
-		//this.infof()
-
-		// 根据总数，上报数量限制
-		if (_length/v.GetHorizontalCount())*100 < 100-13 {
+		if !validate {
 			goto LOOP
 		}
-		// 获取数值
-		for _, archive := range v.horizontalArchive {
-			if this.mode == EnforcerModeForZHW {
-				value += archive.GetRetTemp()
-			}
-		}
 		if this.watcher.GetCalculateCallback() != nil {
-			this.watcher.GetCalculateCallback()(v.GetCode(), 2, value/float32(_length))
+			this.watcher.GetCalculateCallback()(v.GetCode(), 2, value)
 		}
 	LOOP:
 		// 清空
-		v.horizontalArchive = make([]persist.IArchive, 0)
+		v.build = make([]persist.IArchive, 0)
+	}
+	return
+}
+
+// vertical 垂直计算
+func (this *Enforcer) vertical() {
+	for _, v := range this.data {
+
+		validate, value := calc(this.mode, v.house, v.GetHouseCount(), 13)
+
+		if !validate {
+			goto LOOP
+		}
+		if this.watcher.GetCalculateCallback() != nil {
+			this.watcher.GetCalculateCallback()(v.GetCode(), 1, value)
+		}
+	LOOP:
+		// 清空
+		v.house = make([]persist.IArchive, 0)
 	}
 	return
 }

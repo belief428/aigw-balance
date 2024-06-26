@@ -1,11 +1,118 @@
 package aibalance
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"os"
 )
+
+type Context struct {
+	*http.Request
+	http.ResponseWriter
+}
+
+type Response struct {
+	Code    int         `json:"code"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+}
+
+func (this *Response) Marshal() []byte {
+	_bytes, _ := json.Marshal(this)
+	return _bytes
+}
+
+// getParams 获取参数信息
+func getParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Write((&Response{
+			Code:    0,
+			Message: "ok",
+			Data:    enforcer.GetParams(),
+		}).Marshal())
+	}
+}
+
+// setParams 设置参数信息
+func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp := &Response{Code: 0, Message: "ok"}
+
+		_params := make(map[string]interface{}, 0)
+
+		_bytes, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			goto LOOP
+		}
+		if err = json.Unmarshal(_bytes, &_params); err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			goto LOOP
+		}
+		if err = enforcer.SetParams(_params); err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+		}
+	LOOP:
+		w.Write(resp.Marshal())
+	}
+}
+
+// getArchive 获取档案信息
+func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp := &Response{Code: 0, Message: "ok"}
+		//_bytes, err := io.ReadAll(r.Body)
+		//
+		//if err != nil {
+		//	resp.Code = -1
+		//	resp.Message = err.Error()
+		//	w.Write(resp.Marshal())
+		//	return
+		//}
+		resp.Data = enforcer.data
+		w.Write(resp.Marshal())
+	}
+}
+
+// getHistory 获取调控历史信息
+func getHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp := &Response{Code: 0, Message: "ok"}
+
+		_bytes, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		_params := make(map[string]interface{}, 0)
+
+		if err = json.Unmarshal(_bytes, &_params); err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		code, has := _params["code"]
+
+		if !has {
+			resp.Code = -1
+			resp.Message = "Please choose code"
+			w.Write(resp.Marshal())
+			return
+		}
+		fmt.Println(code)
+	}
+}
 
 func (this *Enforcer) http() {
 	defer func() {
@@ -38,6 +145,12 @@ func (this *Enforcer) http() {
 			return
 		}
 	})
+	// TODO：注入路由
+	// context := &Context{}
+	mux.HandleFunc("/v1/api/params", getParams(this))
+	mux.HandleFunc("/v1/api/params/set", setParams(this))
+	mux.HandleFunc("/v1/api/archive", getArchive(this))
+
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", this.port), mux); err != nil {
 		this.errorf("Aigw-balance http listen error：%v", err)
 		return

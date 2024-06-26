@@ -1,6 +1,7 @@
 package aibalance
 
 import (
+	"encoding/json"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/utils"
@@ -10,10 +11,11 @@ import (
 
 // Enforcer 执行者
 type Enforcer struct {
-	port    int // 端口
-	mode    int // 模式：1-追回温，2-追流量，
-	watcher persist.IWatcher
-	logger  persist.Logger
+	port       int // 端口
+	mode       int // 模式：1-追回温，2-追流量，
+	watcher    persist.IWatcher
+	logger     persist.Logger
+	saveStatus bool
 
 	maxCycle int
 
@@ -25,8 +27,21 @@ type Enforcer struct {
 // EnforcerData 执行者网关参数
 type EnforcerData struct {
 	persist.IGateway
-	horizontalArchive []persist.IArchive // 水平平衡档案
-	verticalArchive   []persist.IArchive // 垂直平衡档案
+	build []persist.IArchive // 水平平衡档案
+	house []persist.IArchive // 垂直平衡档案
+}
+
+func (this *EnforcerData) MarshalJSON() ([]byte, error) {
+	data := map[string]interface{}{
+		"name":        this.IGateway.GetName(),
+		"code":        this.IGateway.GetCode(),
+		"build_count": this.IGateway.GetBuildCount(),
+		"house_count": this.IGateway.GetHouseCount(),
+
+		"builds": this.build,
+		"houses": this.house,
+	}
+	return json.Marshal(data)
 }
 
 var once sync.Once
@@ -57,6 +72,26 @@ func WithLogger(logger persist.Logger) Option {
 	}
 }
 
+func WithSave(status bool) Option {
+	return func(enforcer *Enforcer) {
+		enforcer.saveStatus = status
+	}
+}
+
+func NewEnforcer(options ...Option) *Enforcer {
+	_enforcer := &Enforcer{
+		mode:    EnforcerModeForZHW,
+		watcher: NewWatcher(),
+		params:  new(model.Params),
+		data:    make([]EnforcerData, 0),
+		time:    time.Now(),
+	}
+	for _, option := range options {
+		option(_enforcer)
+	}
+	return _enforcer
+}
+
 func (this *Enforcer) info(args ...interface{}) {
 	if this.logger != nil {
 		this.logger.Info(args...)
@@ -80,20 +115,6 @@ func (this *Enforcer) errorf(template string, args ...interface{}) {
 	if this.logger != nil {
 		this.logger.Errorf(template, args...)
 	}
-}
-
-func NewEnforcer(options ...Option) *Enforcer {
-	_enforcer := &Enforcer{
-		mode:    EnforcerModeForZHW,
-		watcher: NewWatcher(),
-		params:  new(model.Params),
-		data:    make([]EnforcerData, 0),
-		time:    time.Now(),
-	}
-	for _, option := range options {
-		option(_enforcer)
-	}
-	return _enforcer
 }
 
 func (this *Enforcer) Enforcer() error {

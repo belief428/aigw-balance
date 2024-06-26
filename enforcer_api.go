@@ -8,7 +8,12 @@ import (
 )
 
 func (this *Enforcer) SetParams(params map[string]interface{}) error {
-	_bytes, err := json.Marshal(params)
+	_params := utils.StructToMap(this.params)
+
+	for key, val := range params {
+		_params[key] = val
+	}
+	_bytes, err := json.Marshal(_params)
 
 	if err != nil {
 		return err
@@ -19,8 +24,8 @@ func (this *Enforcer) SetParams(params map[string]interface{}) error {
 	return utils.TouchJson(this.params.Filepath(), _bytes)
 }
 
-func (this *Enforcer) GetParams() (map[string]interface{}, error) {
-	return utils.StructToMap(this.params), nil
+func (this *Enforcer) GetParams() map[string]interface{} {
+	return utils.StructToMap(this.params)
 }
 
 func (this *Enforcer) Register(gateway persist.IGateway) error {
@@ -38,9 +43,9 @@ func (this *Enforcer) Register(gateway persist.IGateway) error {
 	}
 	if !isExist {
 		this.data = append(this.data, EnforcerData{
-			IGateway:          gateway,
-			horizontalArchive: make([]persist.IArchive, 0),
-			verticalArchive:   make([]persist.IArchive, 0),
+			IGateway: gateway,
+			build:    make([]persist.IArchive, 0),
+			house:    make([]persist.IArchive, 0),
 		})
 	}
 	return nil
@@ -51,20 +56,9 @@ func (this *Enforcer) RegisterBuild(code string, archive persist.IArchive) error
 		return errors.New("Please set archive name or address ")
 	}
 	// 判断是否存在
-	for _, v := range this.data {
+	for k, v := range this.data {
 		if v.GetCode() == code {
-			isExist := false
-
-			for _, iArchive := range v.horizontalArchive {
-				if iArchive.GetName() == archive.GetName() {
-					iArchive = archive
-					isExist = true
-					break
-				}
-			}
-			if !isExist {
-				v.horizontalArchive = append(v.horizontalArchive, archive)
-			}
+			this.data[k].build = this.fill(v.build, archive)
 			break
 		}
 	}
@@ -75,23 +69,27 @@ func (this *Enforcer) RegisterHouse(code string, archive persist.IArchive) error
 	if archive.GetName() == "" {
 		return errors.New("Please set archive name or address ")
 	}
-	// 判断是否存在
-	for _, v := range this.data {
+	for k, v := range this.data {
 		if v.GetCode() == code {
-			isExist := false
-
-			for _, iArchive := range v.verticalArchive {
-				if iArchive.GetName() == archive.GetName() {
-					iArchive = archive
-					isExist = true
-					break
-				}
-			}
-			if !isExist {
-				v.verticalArchive = append(v.verticalArchive, archive)
-			}
+			this.data[k].house = this.fill(v.house, archive)
 			break
 		}
 	}
 	return nil
+}
+
+func (this *Enforcer) fill(src []persist.IArchive, dist persist.IArchive) []persist.IArchive {
+	isExist := false
+
+	for key, iArchive := range src {
+		if iArchive.GetName() == dist.GetName() {
+			src[key] = dist
+			isExist = true
+			break
+		}
+	}
+	if !isExist {
+		src = append(src, dist)
+	}
+	return src
 }
