@@ -60,6 +60,9 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 			resp.Message = err.Error()
 		}
 	LOOP:
+		if enforcer.watcher != nil {
+			enforcer.watcher.GetParamsCallback()(_params)
+		}
 		w.Write(resp.Marshal())
 	}
 }
