@@ -3,6 +3,7 @@ package aibalance
 import (
 	"encoding/json"
 	"github.com/belief428/aigw-balance/model"
+	"github.com/belief428/aigw-balance/utils"
 	"testing"
 )
 
@@ -40,7 +41,7 @@ type A struct {
 
 func (this *A) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
-		"name":   "Hanson",
+		"name":   this.Name,
 		"age":    18,
 		"weight": 68,
 	}
@@ -53,5 +54,15 @@ func TestJsonMarshal(t *testing.T) {
 		Age:  30,
 	}
 	_bytes, _ := json.Marshal(dist)
+	t.Log(string(_bytes))
+
+	utils.LoadConfig("data/params.json", dist)
+
+	_bytes, _ = json.Marshal(dist)
+	t.Log(string(_bytes))
+
+	utils.LoadConfig("data/params1.json", dist)
+
+	_bytes, _ = json.Marshal(dist)
 	t.Log(string(_bytes))
 }

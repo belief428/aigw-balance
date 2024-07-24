@@ -9,3 +9,11 @@ type Params struct {
 func (this *Params) Filepath() string {
 	return "data/params.json"
 }
+
+func NewParams() *Params {
+	return &Params{
+		Name:           "AI-balance",
+		VerticalTime:   10,
+		HorizontalTime: 10,
+	}
+}

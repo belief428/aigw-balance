@@ -150,9 +150,9 @@ func (this *Enforcer) http() {
 	})
 	// TODO：注入路由
 	// context := &Context{}
-	mux.HandleFunc("/v1/api/params", getParams(this))
-	mux.HandleFunc("/v1/api/params/set", setParams(this))
-	mux.HandleFunc("/v1/api/archive", getArchive(this))
+	mux.HandleFunc("/api/v1/params", getParams(this))
+	mux.HandleFunc("/api/v1/params/set", setParams(this))
+	mux.HandleFunc("/api/v1/archive", getArchive(this))
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", this.port), mux); err != nil {
 		this.errorf("Aigw-balance http listen error：%v", err)

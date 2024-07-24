@@ -8,6 +8,8 @@ import (
 const (
 	// EnforcerModeForZHW 追回温
 	EnforcerModeForZHW = iota + 1
+	// EnforcerModeForZLL 追流量
+	EnforcerModeForZLL
 )
 
 // calc
@@ -26,13 +28,14 @@ func calc(mode int, data []persist.IArchive, report, limit int) (bool, float32) 
 	if (_length/report)*100 < 100-limit {
 		return false, 0
 	}
-	if mode <= 0 {
-		return false, 0
-	}
 	// 获取数值
 	for _, v := range data {
 		if mode == EnforcerModeForZHW {
 			value += v.GetRetTemp()
+		} else if mode == EnforcerModeForZLL {
+
+		} else {
+			return false, 0
 		}
 	}
 	return true, value / float32(_length)
@@ -49,6 +52,10 @@ func (this *Enforcer) horizontal() {
 		}
 		if this.watcher.GetCalculateCallback() != nil {
 			this.watcher.GetCalculateCallback()(v.GetCode(), 2, value)
+		}
+		// 保存计算记录
+		if this.saveStatus {
+
 		}
 	LOOP:
 		// 清空
@@ -68,6 +75,10 @@ func (this *Enforcer) vertical() {
 		}
 		if this.watcher.GetCalculateCallback() != nil {
 			this.watcher.GetCalculateCallback()(v.GetCode(), 1, value)
+		}
+		// 保存计算记录
+		if this.saveStatus {
+
 		}
 	LOOP:
 		// 清空

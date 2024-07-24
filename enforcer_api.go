@@ -42,7 +42,7 @@ func (this *Enforcer) Register(gateway persist.IGateway) error {
 		}
 	}
 	if !isExist {
-		this.data = append(this.data, EnforcerData{
+		this.data = append(this.data, EnforcerData[persist.IArchive]{
 			IGateway: gateway,
 			build:    make([]persist.IArchive, 0),
 			house:    make([]persist.IArchive, 0),

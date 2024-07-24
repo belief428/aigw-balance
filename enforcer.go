@@ -11,32 +11,32 @@ import (
 
 // Enforcer 执行者
 type Enforcer struct {
-	port       int // 端口
-	mode       int // 模式：1-追回温，2-追流量，
-	watcher    persist.IWatcher
-	logger     persist.Logger
-	saveStatus bool
+	port       int              // 端口
+	mode       int              // 模式：1-追回温，2-追流量，
+	watcher    persist.IWatcher //
+	logger     persist.Logger   // 日志模块
+	saveStatus bool             // 状态，是否存储调试日志
 
 	maxCycle int
 
 	params *model.Params
-	data   []EnforcerData // 信息
+	data   []EnforcerData[persist.IArchive] // 信息
 	time   time.Time
 }
 
 // EnforcerData 执行者网关参数
-type EnforcerData struct {
+type EnforcerData[T persist.IArchive] struct {
 	persist.IGateway
-	build []persist.IArchive // 水平平衡档案
-	house []persist.IArchive // 垂直平衡档案
+	build []T // 水平平衡档案
+	house []T // 垂直平衡档案
 }
 
-func (this *EnforcerData) MarshalJSON() ([]byte, error) {
+func (this *EnforcerData[T]) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
-		"name":        this.IGateway.GetName(),
-		"code":        this.IGateway.GetCode(),
-		"build_count": this.IGateway.GetBuildCount(),
-		"house_count": this.IGateway.GetHouseCount(),
+		"name":        this.GetName(),
+		"code":        this.GetCode(),
+		"build_count": this.GetBuildCount(),
+		"house_count": this.GetHouseCount(),
 
 		"builds": this.build,
 		"houses": this.house,
@@ -82,8 +82,8 @@ func NewEnforcer(options ...Option) *Enforcer {
 	_enforcer := &Enforcer{
 		mode:    EnforcerModeForZHW,
 		watcher: NewWatcher(),
-		params:  new(model.Params),
-		data:    make([]EnforcerData, 0),
+		params:  model.NewParams(),
+		data:    make([]EnforcerData[persist.IArchive], 0),
 		time:    time.Now(),
 	}
 	for _, option := range options {
