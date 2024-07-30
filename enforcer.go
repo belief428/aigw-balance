@@ -2,6 +2,7 @@ package aibalance
 
 import (
 	"encoding/json"
+	"github.com/belief428/aigw-balance/lib/queue"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/utils"
@@ -11,17 +12,19 @@ import (
 
 // Enforcer 执行者
 type Enforcer struct {
-	port       int              // 端口
-	mode       int              // 模式：1-追回温，2-追流量，
-	watcher    persist.IWatcher //
-	logger     persist.Logger   // 日志模块
-	saveStatus bool             // 状态，是否存储调试日志
+	port    int              // 端口
+	mode    int              // 模式：1-追回温，2-追流量，
+	watcher persist.IWatcher //
+	logger  persist.Logger   // 日志模块
 
 	maxCycle int
 
 	params *model.Params
 	data   []EnforcerData[persist.IArchive] // 信息
-	time   time.Time
+
+	queue *queue.Instance
+
+	time time.Time
 }
 
 // EnforcerData 执行者网关参数
@@ -72,18 +75,13 @@ func WithLogger(logger persist.Logger) Option {
 	}
 }
 
-func WithSave(status bool) Option {
-	return func(enforcer *Enforcer) {
-		enforcer.saveStatus = status
-	}
-}
-
 func NewEnforcer(options ...Option) *Enforcer {
 	_enforcer := &Enforcer{
 		mode:    EnforcerModeForZHW,
 		watcher: NewWatcher(),
 		params:  model.NewParams(),
 		data:    make([]EnforcerData[persist.IArchive], 0),
+		queue:   queue.NewInstance(),
 		time:    time.Now(),
 	}
 	for _, option := range options {
@@ -127,6 +125,8 @@ func (this *Enforcer) Enforcer() error {
 		}
 		// 载入进程
 		go this.process()
+		// 载入队列
+		go this.consume()
 	})
 	return nil
 }

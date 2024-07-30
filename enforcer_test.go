@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/utils"
+	"sync"
 	"testing"
 )
 
@@ -65,4 +66,17 @@ func TestJsonMarshal(t *testing.T) {
 
 	_bytes, _ = json.Marshal(dist)
 	t.Log(string(_bytes))
+}
+
+func TestEnforcerCache(t *testing.T) {
+	var src = &EnforcerCache{
+		locker: new(sync.RWMutex),
+	}
+	gatewaty := NewGateway()
+	gatewaty.code = "123"
+	err := src.saveHorizontalRegulate(gatewaty, model.NewRegulate())
+
+	if err != nil {
+		t.Log(err)
+	}
 }

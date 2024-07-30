@@ -61,14 +61,20 @@ func (this *Gateway) GetHouseCount() int {
 //}
 
 func NewGateway() *Gateway {
-	return &Gateway{}
+	return &Gateway{
+		buildCount: 1, houseCount: 1,
+	}
 }
 
 // Archive 档案信息
 type Archive struct {
-	name  string
+	name     string
+	code     string
+	regulate bool
+
 	build persist.IArchiveBuild
 
+	deg     uint8
 	retTemp float32
 }
 
@@ -80,12 +86,36 @@ func (this *Archive) GetName() string {
 	return this.name
 }
 
+func (this *Archive) SetCode(code string) {
+	this.code = code
+}
+
+func (this *Archive) GetCode() string {
+	return this.code
+}
+
+func (this *Archive) SetRegulate(value bool) {
+	this.regulate = value
+}
+
+func (this *Archive) GetRegulate() bool {
+	return this.regulate
+}
+
 func (this *Archive) SetBuild(build persist.IArchiveBuild) {
 	this.build = build
 }
 
 func (this *Archive) GetBuild() persist.IArchiveBuild {
 	return this.build
+}
+
+func (this *Archive) SetDeg(value uint8) {
+	this.deg = value
+}
+
+func (this *Archive) GetDeg() uint8 {
+	return this.deg
 }
 
 func (this *Archive) SetRetTemp(value float32) {
@@ -98,14 +128,18 @@ func (this *Archive) GetRetTemp() float32 {
 
 func (this *Archive) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
-		"name": this.name, "build": this.build,
+		"name": this.name, "code": this.code,
+		"regulate": this.regulate,
+		"build":    this.build,
 		"ret_temp": this.retTemp,
 	}
 	return json.Marshal(data)
 }
 
 func NewArchive() *Archive {
-	return &Archive{}
+	return &Archive{
+		regulate: true,
+	}
 }
 
 // ArchiveBuild 档案建筑信息

@@ -14,10 +14,14 @@ type IGateway interface {
 type IArchive interface {
 	// GetName 获取名称
 	GetName() string
-
+	// GetCode 获取编号
+	GetCode() string
+	// GetRegulate 获取调控状态
+	GetRegulate() bool
 	// GetBuild 获取建筑附加信息
 	GetBuild() IArchiveBuild
-
+	// GetDeg 获取开度
+	GetDeg() uint8
 	// GetRetTemp 获取回温
 	GetRetTemp() float32
 }

@@ -1,18 +1,26 @@
 package aibalance
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/belief428/aigw-balance/persist"
+)
 
 type Watcher struct {
-	calculateCallbackFunc func(code string, kind int, value float32)
+	regulateCallbackFunc  func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate
 	setParamsCallbackFunc func(params map[string]interface{})
 }
 
-func (this *Watcher) SetCalculateCallback(function func(code string, kind int, value float32)) {
-	this.calculateCallbackFunc = function
+type WatcherRegulate struct {
+	status int
+	remark string
 }
 
-func (this *Watcher) GetCalculateCallback() func(code string, kind int, value float32) {
-	return this.calculateCallbackFunc
+func (this *Watcher) SetRegulateCallback(function func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate) {
+	this.regulateCallbackFunc = function
+}
+
+func (this *Watcher) GetRegulateCallback() func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate {
+	return this.regulateCallbackFunc
 }
 
 func (this *Watcher) SetParamsCallback(function func(params map[string]interface{})) {
@@ -25,11 +33,32 @@ func (this *Watcher) GetParamsCallback() func(params map[string]interface{}) {
 
 func NewWatcher() *Watcher {
 	return &Watcher{
-		calculateCallbackFunc: func(code string, kind int, value float32) {
-			fmt.Println("calculateCallbackFunc", " code：", code, " kind：", kind, " value：", value)
+		regulateCallbackFunc: func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate {
+			fmt.Println("regulateCallbackFunc", " code：", code, " archiveCode：", archiveCode, " kind：", kind, " value：", value)
+			return NewWatcherRegulate()
 		},
 		setParamsCallbackFunc: func(params map[string]interface{}) {
 			fmt.Println("setParamsCallbackFunc params：", params)
 		},
 	}
+}
+
+func (this *WatcherRegulate) SetStatus(status int) {
+	this.status = status
+}
+
+func (this *WatcherRegulate) GetStatus() int {
+	return this.status
+}
+
+func (this *WatcherRegulate) SetRemark(remark string) {
+	this.remark = remark
+}
+
+func (this *WatcherRegulate) GetRemark() string {
+	return this.remark
+}
+
+func NewWatcherRegulate() *WatcherRegulate {
+	return &WatcherRegulate{status: 1}
 }

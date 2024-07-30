@@ -12,6 +12,13 @@ const (
 	EnforcerModeForZLL
 )
 
+const (
+	// EnforcerKindForVertical 垂直计算
+	EnforcerKindForVertical int = iota + 1
+	// EnforcerKindForHorizontal 水平计算
+	EnforcerKindForHorizontal
+)
+
 // calc
 // @Description: 平衡计算发起
 // @param mode 模式
@@ -20,12 +27,12 @@ const (
 // @param limit 最低限制百分比
 // @return bool
 // @return float32
-func calc(mode int, data []persist.IArchive, report, limit int) (bool, float32) {
+func calc(mode int, data []persist.IArchive, report, limit int) (bool, uint8) {
 	var value float32
 
 	_length := len(data)
 
-	if (_length/report)*100 < 100-limit {
+	if report <= 0 || (_length/report)*100 < 100-limit {
 		return false, 0
 	}
 	// 获取数值
@@ -38,24 +45,22 @@ func calc(mode int, data []persist.IArchive, report, limit int) (bool, float32) 
 			return false, 0
 		}
 	}
-	return true, value / float32(_length)
+	return true, uint8(value / float32(_length))
 }
 
 // horizontal 水平计算
 func (this *Enforcer) horizontal() {
 	for _, v := range this.data {
-
 		validate, value := calc(this.mode, v.build, v.GetBuildCount(), 13)
 
 		if !validate {
 			goto LOOP
 		}
-		if this.watcher.GetCalculateCallback() != nil {
-			this.watcher.GetCalculateCallback()(v.GetCode(), 2, value)
-		}
-		// 保存计算记录
-		if this.saveStatus {
-
+		for _, val := range v.build {
+			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
+				gateway: v, archive: val, mode: "自动", kind: EnforcerKindForHorizontal, value: value,
+				watcher: this.watcher,
+			})
 		}
 	LOOP:
 		// 清空
@@ -73,12 +78,11 @@ func (this *Enforcer) vertical() {
 		if !validate {
 			goto LOOP
 		}
-		if this.watcher.GetCalculateCallback() != nil {
-			this.watcher.GetCalculateCallback()(v.GetCode(), 1, value)
-		}
-		// 保存计算记录
-		if this.saveStatus {
-
+		for _, val := range v.house {
+			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
+				gateway: v, archive: val, mode: "自动", kind: EnforcerKindForVertical, value: value,
+				watcher: this.watcher,
+			})
 		}
 	LOOP:
 		// 清空
@@ -107,6 +111,7 @@ func (this *Enforcer) process() {
 		if err := recover(); err != nil {
 			this.errorf("Aigw-balance process recover error：%v", err)
 		}
+		go this.process()
 	}()
 	ticket := time.NewTicker(time.Second)
 
@@ -135,17 +140,15 @@ func (this *Enforcer) process() {
 
 			// 垂直平衡模式
 			if this.params.VerticalTime > 0 {
-				if status := this.rule(startTime, nowTime, this.params.VerticalTime); !status {
-					continue
+				if status := this.rule(startTime, nowTime, this.params.VerticalTime); status {
+					this.vertical()
 				}
-				this.vertical()
 			}
 			// 水平平衡模式
 			if this.params.HorizontalTime > 0 {
-				if status := this.rule(startTime, nowTime, this.params.HorizontalTime); !status {
-					continue
+				if status := this.rule(startTime, nowTime, this.params.HorizontalTime); status {
+					this.horizontal()
 				}
-				this.horizontal()
 			}
 		}
 	}

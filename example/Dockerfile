@@ -9,8 +9,6 @@ ENV FILE app.server
 
 ENV GO111MODULE on
 ENV GOPROXY https://goproxy.cn,direct
-RUN #go env -w GO111MODULE=on
-RUN #go env -w GOPROXY=https://goproxy.cn,direct
 RUN go build -ldflags "-w -s" -o $FILE
 
 FROM alpine

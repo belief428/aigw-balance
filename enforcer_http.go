@@ -122,6 +122,7 @@ func (this *Enforcer) http() {
 		if err := recover(); err != nil {
 			this.logger.Errorf("Aigw-balance http recover error：%v", err)
 		}
+		go this.http()
 	}()
 	mux := http.NewServeMux()
 	// 启动静态文件服务

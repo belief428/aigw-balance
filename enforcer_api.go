@@ -3,6 +3,7 @@ package aibalance
 import (
 	"encoding/json"
 	"errors"
+	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/utils"
 )
@@ -76,6 +77,10 @@ func (this *Enforcer) RegisterHouse(code string, archive persist.IArchive) error
 		}
 	}
 	return nil
+}
+
+func (this *Enforcer) ReportRegulateLog(code string, archive persist.IArchive) {
+	model.NewRegulate()
 }
 
 func (this *Enforcer) fill(src []persist.IArchive, dist persist.IArchive) []persist.IArchive {
