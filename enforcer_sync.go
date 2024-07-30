@@ -50,21 +50,37 @@ func calc(mode int, data []persist.IArchive, report, limit int) (bool, uint8) {
 
 // horizontal 水平计算
 func (this *Enforcer) horizontal() {
-	for _, v := range this.data {
-		validate, value := calc(this.mode, v.build, v.GetBuildCount(), 13)
+	builds := make([]persist.IArchive, 0)
+	buildCount := 0
 
-		if !validate {
-			goto LOOP
-		}
+	for _, v := range this.data {
+		buildCount += v.GetBuildCount()
+
 		for _, val := range v.build {
+			if !val.GetRegulate() {
+				buildCount--
+				continue
+			}
+			builds = append(builds, val)
+		}
+	}
+	validate, value := calc(this.mode, builds, buildCount, 13)
+
+	if !validate {
+		return
+	}
+	for _, v := range this.data {
+		for _, val := range v.build {
+			if !val.GetRegulate() {
+				continue
+			}
 			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
 				gateway: v, archive: val, mode: "自动", kind: EnforcerKindForHorizontal, value: value,
-				watcher: this.watcher,
+				watcher: this.watcher, logger: this.logger,
 			})
 		}
-	LOOP:
-		// 清空
-		v.build = make([]persist.IArchive, 0)
+		//// 清空
+		//v.build = make([]persist.IArchive, 0)
 	}
 	return
 }
@@ -72,21 +88,30 @@ func (this *Enforcer) horizontal() {
 // vertical 垂直计算
 func (this *Enforcer) vertical() {
 	for _, v := range this.data {
+		houses := make([]persist.IArchive, 0)
+		houseCount := v.GetHouseCount()
 
-		validate, value := calc(this.mode, v.house, v.GetHouseCount(), 13)
+		for _, val := range v.house {
+			if !val.GetRegulate() {
+				houseCount--
+				continue
+			}
+			houses = append(houses, val)
+		}
+		validate, value := calc(this.mode, houses, houseCount, 13)
 
 		if !validate {
-			goto LOOP
+			continue
 		}
-		for _, val := range v.house {
+		for _, val := range houses {
 			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
 				gateway: v, archive: val, mode: "自动", kind: EnforcerKindForVertical, value: value,
-				watcher: this.watcher,
+				watcher: this.watcher, logger: this.logger,
 			})
 		}
-	LOOP:
-		// 清空
-		v.house = make([]persist.IArchive, 0)
+		//LOOP:
+		//	// 清空
+		//	v.house = make([]persist.IArchive, 0)
 	}
 	return
 }

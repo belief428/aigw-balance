@@ -18,6 +18,8 @@ type IArchive interface {
 	GetCode() string
 	// GetRegulate 获取调控状态
 	GetRegulate() bool
+	// GetWeight 获取权重
+	GetWeight() float32
 	// GetBuild 获取建筑附加信息
 	GetBuild() IArchiveBuild
 	// GetDeg 获取开度
