@@ -1,7 +1,6 @@
 package aibalance
 
 import (
-	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"time"
@@ -10,7 +9,6 @@ import (
 type EnforcerQueueData[G persist.IGateway, T persist.IArchive] struct {
 	gateway G
 	archive T
-	mode    string
 	kind    int // 调控类型，1：垂直，2：水平
 	value   uint8
 
@@ -41,7 +39,6 @@ func (this *EnforcerQueueData[G, T]) Call(args ...interface{}) {
 				_regulate := model.NewRegulate()
 				_regulate.Name = archive.GetName()
 				_regulate.Code = archive.GetCode()
-				_regulate.Mode = this.mode
 				_regulate.RetTemp = archive.GetRetTemp()
 				_regulate.PrevDeg = archive.GetDeg()
 				_regulate.NextDeg = this.value
@@ -57,7 +54,6 @@ func (this *EnforcerQueueData[G, T]) Call(args ...interface{}) {
 					err = _enforcerCache.saveHorizontalRegulate(gateway, _regulate)
 				}
 				if err != nil {
-					fmt.Println(err)
 					this.logger.Errorf("Aigw-balance cache save：%d error：%v", this.kind, err)
 				}
 			}(this.gateway, this.archive)

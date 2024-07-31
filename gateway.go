@@ -71,11 +71,12 @@ type Archive struct {
 	name     string
 	code     string
 	regulate bool
+	weight   float32
 
 	build persist.IArchiveBuild
 
-	deg     uint8
-	retTemp float32
+	deg               uint8
+	retTemp, roomTemp float32
 }
 
 func (this *Archive) SetName(name string) {
@@ -102,6 +103,14 @@ func (this *Archive) GetRegulate() bool {
 	return this.regulate
 }
 
+func (this *Archive) SetWeight(weight float32) {
+	this.weight = weight
+}
+
+func (this *Archive) GetWeight() float32 {
+	return this.weight
+}
+
 func (this *Archive) SetBuild(build persist.IArchiveBuild) {
 	this.build = build
 }
@@ -126,10 +135,18 @@ func (this *Archive) GetRetTemp() float32 {
 	return this.retTemp
 }
 
+func (this *Archive) SetRoomTemp(value float32) {
+	this.roomTemp = value
+}
+
+func (this *Archive) GetRoomTemp() float32 {
+	return this.roomTemp
+}
+
 func (this *Archive) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
 		"name": this.name, "code": this.code,
-		"regulate": this.regulate,
+		"regulate": this.regulate, "weight": this.weight,
 		"build":    this.build,
 		"ret_temp": this.retTemp,
 	}

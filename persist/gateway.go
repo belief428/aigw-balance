@@ -26,6 +26,8 @@ type IArchive interface {
 	GetDeg() uint8
 	// GetRetTemp 获取回温
 	GetRetTemp() float32
+	// GetRoomTemp 获取室温
+	GetRoomTemp() float32
 }
 
 type IArchiveBuild interface {

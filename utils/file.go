@@ -102,6 +102,21 @@ func RemoveAll(pwd string, patterns ...string) error {
 	return nil
 }
 
+func Create(filepath string) (*os.File, error) {
+	_path := path.Dir(filepath)
+
+	isExist, err := PathExists(_path)
+
+	if err != nil {
+		return nil, err
+	} else if !isExist {
+		if err = MkdirAll(_path); err != nil {
+			return nil, err
+		}
+	}
+	return os.Create(filepath)
+}
+
 func Touch(filepath string, content []byte) error {
 	_path := path.Dir(filepath)
 

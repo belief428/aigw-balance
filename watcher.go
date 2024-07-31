@@ -3,6 +3,7 @@ package aibalance
 import (
 	"fmt"
 	"github.com/belief428/aigw-balance/persist"
+	"time"
 )
 
 type Watcher struct {
@@ -34,11 +35,11 @@ func (this *Watcher) GetParamsCallback() func(params map[string]interface{}) {
 func NewWatcher() *Watcher {
 	return &Watcher{
 		regulateCallbackFunc: func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate {
-			fmt.Println("regulateCallbackFunc", " code：", code, " archiveCode：", archiveCode, " kind：", kind, " value：", value)
+			fmt.Println("regulateCallbackFunc time：", time.Now(), " code：", code, " archiveCode：", archiveCode, " kind：", kind, " value：", value)
 			return NewWatcherRegulate()
 		},
 		setParamsCallbackFunc: func(params map[string]interface{}) {
-			fmt.Println("setParamsCallbackFunc params：", params)
+			fmt.Println("setParamsCallbackFunc time：", time.Now(), " params：", params)
 		},
 	}
 }

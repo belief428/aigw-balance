@@ -22,11 +22,17 @@ func TestNewEnforcer(t *testing.T) {
 
 	build := NewArchive()
 	build.SetName("一号楼")
+	build.SetCode("11223344")
+	build.SetRetTemp(34.56)
+	build.SetDeg(20)
 	enforcer.RegisterBuild(gateWay.GetCode(), build)
 
-	house := NewArchive()
-	house.SetName("101室")
-	enforcer.RegisterHouse(gateWay.GetCode(), house)
+	build = NewArchive()
+	build.SetName("二号楼")
+	build.SetCode("55667788")
+	build.SetRetTemp(55.00)
+	build.SetDeg(34)
+	enforcer.RegisterBuild(gateWay.GetCode(), build)
 
 	if err := enforcer.Enforcer(); err != nil {
 		t.Log("Enforcer：", err)

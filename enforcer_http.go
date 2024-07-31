@@ -1,12 +1,16 @@
 package aibalance
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/belief428/aigw-balance/utils"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 )
 
 type Context struct {
@@ -23,6 +27,10 @@ type Response struct {
 func (this *Response) Marshal() []byte {
 	_bytes, _ := json.Marshal(this)
 	return _bytes
+}
+
+func (this *Response) Write() {
+
 }
 
 // getParams 获取参数信息
@@ -50,11 +58,8 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 			resp.Message = err.Error()
 			goto LOOP
 		}
-		if err = json.Unmarshal(_bytes, &_params); err != nil {
-			resp.Code = -1
-			resp.Message = err.Error()
-			goto LOOP
-		}
+		json.Unmarshal(_bytes, &_params)
+
 		if err = enforcer.SetParams(_params); err != nil {
 			resp.Code = -1
 			resp.Message = err.Error()
@@ -84,36 +89,60 @@ func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// getHistory 获取调控历史信息
-func getHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
+// getHorizontalHistory 获取水平调控历史信息
+func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		resp := &Response{Code: 0, Message: "ok"}
+		resp := &Response{Code: -1, Message: "ok", Data: make([]string, 0)}
 
 		_bytes, err := io.ReadAll(r.Body)
 
 		if err != nil {
-			resp.Code = -1
 			resp.Message = err.Error()
 			w.Write(resp.Marshal())
 			return
 		}
+		//utils.PathExists()
 		_params := make(map[string]interface{}, 0)
+		json.Unmarshal(_bytes, &_params)
 
-		if err = json.Unmarshal(_bytes, &_params); err != nil {
-			resp.Code = -1
-			resp.Message = err.Error()
-			w.Write(resp.Marshal())
-			return
-		}
-		code, has := _params["code"]
+		date, has := _params["date"]
 
 		if !has {
-			resp.Code = -1
-			resp.Message = "Please choose code"
+			date = time.Now().Format("20060102")
+		}
+		date = strings.ReplaceAll(fmt.Sprintf("%v", date), "-", "")
+
+		filepath := fmt.Sprintf("data/regulate/horizontal/%s.csv", date)
+
+		isExist, _ := utils.FileExists(filepath)
+
+		if !isExist {
+			resp.Code = 0
 			w.Write(resp.Marshal())
 			return
 		}
-		fmt.Println(code)
+		var file *os.File
+
+		if file, err = os.OpenFile(filepath, os.O_RDONLY, 0644); err != nil {
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		reader := csv.NewReader(file)
+
+		records := make([][]string, 0)
+
+		if records, err = reader.ReadAll(); err != nil {
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		resp.Code = 0
+
+		if len(records) > 1 {
+			resp.Data = records[1:]
+		}
+		w.Write(resp.Marshal())
 	}
 }
 
@@ -154,6 +183,7 @@ func (this *Enforcer) http() {
 	mux.HandleFunc("/api/v1/params", getParams(this))
 	mux.HandleFunc("/api/v1/params/set", setParams(this))
 	mux.HandleFunc("/api/v1/archive", getArchive(this))
+	mux.HandleFunc("/api/v1/horizontal/history", getHorizontalHistory(this))
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", this.port), mux); err != nil {
 		this.errorf("Aigw-balance http listen error：%v", err)

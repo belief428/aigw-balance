@@ -75,7 +75,7 @@ func (this *Enforcer) horizontal() {
 				continue
 			}
 			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
-				gateway: v, archive: val, mode: "自动", kind: EnforcerKindForHorizontal, value: value,
+				gateway: v, archive: val, kind: EnforcerKindForHorizontal, value: value,
 				watcher: this.watcher, logger: this.logger,
 			})
 		}
@@ -105,7 +105,7 @@ func (this *Enforcer) vertical() {
 		}
 		for _, val := range houses {
 			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
-				gateway: v, archive: val, mode: "自动", kind: EnforcerKindForVertical, value: value,
+				gateway: v, archive: val, kind: EnforcerKindForVertical, value: value,
 				watcher: this.watcher, logger: this.logger,
 			})
 		}
