@@ -15,25 +15,6 @@ func TestNewEnforcer(t *testing.T) {
 		VerticalTime:   1,
 		HorizontalTime: 2,
 	}
-	gateWay := NewGateway()
-	gateWay.SetCode("23001111")
-	gateWay.SetName("测试服务站")
-	enforcer.Register(gateWay)
-
-	build := NewArchive()
-	build.SetName("一号楼")
-	build.SetCode("11223344")
-	build.SetRetTemp(34.56)
-	build.SetDeg(20)
-	enforcer.RegisterBuild(gateWay.GetCode(), build)
-
-	build = NewArchive()
-	build.SetName("二号楼")
-	build.SetCode("55667788")
-	build.SetRetTemp(55.00)
-	build.SetDeg(34)
-	enforcer.RegisterBuild(gateWay.GetCode(), build)
-
 	if err := enforcer.Enforcer(); err != nil {
 		t.Log("Enforcer：", err)
 		return

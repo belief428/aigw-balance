@@ -12,15 +12,13 @@ import (
 
 // Enforcer 执行者
 type Enforcer struct {
-	port    int              // 端口
-	mode    int              // 模式：1-追回温，2-追流量，
-	watcher persist.IWatcher //
-	logger  persist.Logger   // 日志模块
+	port int // 端口
 
-	maxCycle int
+	watcher persist.IWatcher
+	logger  persist.Logger // 日志模块
 
 	params *model.Params
-	data   []EnforcerData[persist.IArchive] // 信息
+	//data   []EnforcerData[persist.IArchive] // 信息
 
 	queue *queue.Instance
 
@@ -57,12 +55,6 @@ func WithPort(port int) Option {
 	}
 }
 
-func WithMode(mode int) Option {
-	return func(enforcer *Enforcer) {
-		enforcer.mode = mode
-	}
-}
-
 func WithWatcher(watcher persist.IWatcher) Option {
 	return func(enforcer *Enforcer) {
 		enforcer.watcher = watcher
@@ -77,12 +69,11 @@ func WithLogger(logger persist.Logger) Option {
 
 func NewEnforcer(options ...Option) *Enforcer {
 	_enforcer := &Enforcer{
-		mode:    EnforcerModeForZHW,
-		watcher: NewWatcher(),
 		params:  model.NewParams(),
-		data:    make([]EnforcerData[persist.IArchive], 0),
-		queue:   queue.NewInstance(),
-		time:    time.Now(),
+		watcher: NewWatcher(),
+		//data:    make([]EnforcerData[persist.IArchive], 0),
+		queue: queue.NewInstance(),
+		time:  time.Now(),
 	}
 	for _, option := range options {
 		option(_enforcer)

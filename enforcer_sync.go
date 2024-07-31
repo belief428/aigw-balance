@@ -20,98 +20,102 @@ const (
 )
 
 // calc
-// @Description: 平衡计算发起
-// @param mode 模式
-// @param data 数据
-// @param report 上报数
-// @param limit 最低限制百分比
-// @return bool
-// @return float32
-func calc(mode int, data []persist.IArchive, report, limit int) (bool, uint8) {
+// @Description:
+// @param mode
+// @param data
+// @param report
+// @param limit
+// @return []persist.IArchive
+// @return uint8
+func calc(mode int, data []persist.IArchive, limit int) ([]persist.IArchive, uint8) {
 	var value float32
 
 	_length := len(data)
 
-	if report <= 0 || (_length/report)*100 < 100-limit {
-		return false, 0
+	out := make([]persist.IArchive, 0)
+
+	if _length <= 0 {
+		return out, 0
 	}
+	report := _length
+	//|| (_length/report)*100 < 100-limit
 	// 获取数值
 	for _, v := range data {
 		if mode == EnforcerModeForZHW {
-			value += v.GetRetTemp()
+			if value > 0 {
+				value += v.GetRetTemp()
+				continue
+			}
+			report--
 		} else if mode == EnforcerModeForZLL {
 
 		} else {
-			return false, 0
+			return out, 0
 		}
 	}
-	return true, uint8(value / float32(_length))
+	if (report/_length)*100 < 100-limit {
+		return out, 0
+	}
+	return out, uint8(value / float32(_length))
 }
 
 // horizontal 水平计算
 func (this *Enforcer) horizontal() {
-	builds := make([]persist.IArchive, 0)
-	buildCount := 0
-
-	for _, v := range this.data {
-		buildCount += v.GetBuildCount()
-
-		for _, val := range v.build {
-			if !val.GetRegulate() {
-				buildCount--
-				continue
-			}
-			builds = append(builds, val)
-		}
-	}
-	validate, value := calc(this.mode, builds, buildCount, 13)
-
-	if !validate {
-		return
-	}
-	for _, v := range this.data {
-		for _, val := range v.build {
-			if !val.GetRegulate() {
-				continue
-			}
-			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
-				gateway: v, archive: val, kind: EnforcerKindForHorizontal, value: value,
-				watcher: this.watcher, logger: this.logger,
-			})
-		}
-		//// 清空
-		//v.build = make([]persist.IArchive, 0)
-	}
+	//builds := make([]persist.IArchive, 0)
+	//buildCount := 0
+	//
+	//for _, v := range this.data {
+	//	buildCount += v.GetBuildCount()
+	//
+	//	for _, val := range v.build {
+	//		if !val.GetRegulate() {
+	//			buildCount--
+	//			continue
+	//		}
+	//		builds = append(builds, val)
+	//	}
+	//}
+	//notices, value := calc(this.params.Mode, builds, buildCount, 13)
+	//
+	//if len(notices) <= 0 {
+	//	return
+	//}
+	//for _, v := range this.data {
+	//	for _, val := range v.build {
+	//		if !val.GetRegulate() {
+	//			continue
+	//		}
+	//		this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
+	//			gateway: v, archive: val, kind: EnforcerKindForHorizontal, value: value,
+	//			watcher: this.watcher, logger: this.logger,
+	//		})
+	//	}
+	//	//// 清空
+	//	//v.build = make([]persist.IArchive, 0)
+	//}
 	return
 }
 
 // vertical 垂直计算
 func (this *Enforcer) vertical() {
-	for _, v := range this.data {
-		houses := make([]persist.IArchive, 0)
-		houseCount := v.GetHouseCount()
+	// 获取档案信息
+	if this.watcher == nil || this.watcher.GetArchiveFunc == nil {
+		return
+	}
+	notices, value := calc(this.params.Mode, this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+		Code: "",
+		Kind: EnforcerKindForVertical,
+	}), 13)
 
-		for _, val := range v.house {
-			if !val.GetRegulate() {
-				houseCount--
-				continue
-			}
-			houses = append(houses, val)
-		}
-		validate, value := calc(this.mode, houses, houseCount, 13)
-
-		if !validate {
-			continue
-		}
-		for _, val := range houses {
-			this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
-				gateway: v, archive: val, kind: EnforcerKindForVertical, value: value,
-				watcher: this.watcher, logger: this.logger,
-			})
-		}
-		//LOOP:
-		//	// 清空
-		//	v.house = make([]persist.IArchive, 0)
+	if len(notices) <= 0 {
+		return
+	}
+	for _, val := range notices {
+		this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
+			//gateway: this.data[0].IGateway,
+			archive: val, kind: EnforcerKindForVertical, value: value,
+			watcher: this.watcher, logger: this.logger,
+		})
 	}
 	return
 }

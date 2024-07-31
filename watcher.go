@@ -7,7 +7,8 @@ import (
 )
 
 type Watcher struct {
-	regulateCallbackFunc  func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate
+	getArchiveFunc        func(params *persist.WatcherArchiveParams) []persist.IArchive
+	regulateCallbackFunc  func(params *persist.WatcherRegulateParams) persist.IWatchRegulate
 	setParamsCallbackFunc func(params map[string]interface{})
 }
 
@@ -16,26 +17,39 @@ type WatcherRegulate struct {
 	remark string
 }
 
-func (this *Watcher) SetRegulateCallback(function func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate) {
+func (this *Watcher) GetArchiveFunc() func(params *persist.WatcherArchiveParams) []persist.IArchive {
+	return this.getArchiveFunc
+}
+
+func (this *Watcher) SetArchiveFunc(function func(params *persist.WatcherArchiveParams) []persist.IArchive) {
+	this.getArchiveFunc = function
+}
+
+func (this *Watcher) SetRegulateCallbackFunc(function func(params *persist.WatcherRegulateParams) persist.IWatchRegulate) {
 	this.regulateCallbackFunc = function
 }
 
-func (this *Watcher) GetRegulateCallback() func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate {
+func (this *Watcher) GetRegulateCallbackFunc() func(params *persist.WatcherRegulateParams) persist.IWatchRegulate {
 	return this.regulateCallbackFunc
 }
 
-func (this *Watcher) SetParamsCallback(function func(params map[string]interface{})) {
+func (this *Watcher) SetParamsCallbackFunc(function func(params map[string]interface{})) {
 	this.setParamsCallbackFunc = function
 }
 
-func (this *Watcher) GetParamsCallback() func(params map[string]interface{}) {
+func (this *Watcher) GetParamsCallbackFunc() func(params map[string]interface{}) {
 	return this.setParamsCallbackFunc
 }
 
 func NewWatcher() *Watcher {
 	return &Watcher{
-		regulateCallbackFunc: func(code, archiveCode string, kind int, value uint8) persist.IWatchRegulate {
-			fmt.Println("regulateCallbackFunc time：", time.Now(), " code：", code, " archiveCode：", archiveCode, " kind：", kind, " value：", value)
+		getArchiveFunc: func(params *persist.WatcherArchiveParams) []persist.IArchive {
+			fmt.Println("getArchiveFunc time：", time.Now(), " code：", params.Code, " kind：", params.Kind)
+			return nil
+		},
+		regulateCallbackFunc: func(params *persist.WatcherRegulateParams) persist.IWatchRegulate {
+			fmt.Println("regulateCallbackFunc time：", time.Now(), " code：", params.Code, " archiveCode：", params.ArchiveCode,
+				" kind：", params.Kind, " value：", params.Value)
 			return NewWatcherRegulate()
 		},
 		setParamsCallbackFunc: func(params map[string]interface{}) {

@@ -1,14 +1,32 @@
 package persist
 
+// WatcherArchiveParams 档案参数
+type WatcherArchiveParams struct {
+	Code string `json:"code"` // 网关编号
+	Kind int    `json:"kind"` //  1-垂直平衡、户阀信息，2-水平平衡、楼阀信息
+}
+
+// WatcherRegulateParams 调控参数
+type WatcherRegulateParams struct {
+	Code        string `json:"code"`         // 网关编号
+	ArchiveCode string `json:"archive_code"` // 设备编号
+	Kind        int    `json:"kind"`         //  1-垂直平衡、户阀信息，2-水平平衡、楼阀信息
+	Value       uint8  `json:"value"`        // 反馈开度
+}
+
 type IWatcher interface {
-	// SetRegulateCallback 设置调控回调函数
-	SetRegulateCallback(func(code, archiveCode string, kind int, value uint8) IWatchRegulate)
-	// GetRegulateCallback 获取调控回调函数
-	GetRegulateCallback() func(code, archiveCode string, kind int, value uint8) IWatchRegulate
-	// SetParamsCallback 设置参数回调函数
-	SetParamsCallback(func(params map[string]interface{}))
+	// GetArchiveFunc 获取档案函数
+	GetArchiveFunc() func(*WatcherArchiveParams) []IArchive
+	// SetArchiveFunc 设置档案函数
+	SetArchiveFunc(func(*WatcherArchiveParams) []IArchive)
+	// SetRegulateCallbackFunc 设置调控回调函数
+	SetRegulateCallbackFunc(func(*WatcherRegulateParams) IWatchRegulate)
+	// GetRegulateCallbackFunc 获取调控回调函数
+	GetRegulateCallbackFunc() func(*WatcherRegulateParams) IWatchRegulate
+	// SetParamsCallbackFunc 设置参数回调函数
+	SetParamsCallbackFunc(func(params map[string]interface{}))
 	// GetParamsCallback 获取参数回调函数
-	GetParamsCallback() func(params map[string]interface{})
+	GetParamsCallbackFunc() func(params map[string]interface{})
 }
 
 type IWatchRegulate interface {

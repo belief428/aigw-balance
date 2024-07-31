@@ -66,7 +66,7 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 		}
 	LOOP:
 		if enforcer.watcher != nil {
-			enforcer.watcher.GetParamsCallback()(_params)
+			enforcer.watcher.GetParamsCallbackFunc()(_params)
 		}
 		w.Write(resp.Marshal())
 	}
@@ -84,7 +84,7 @@ func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 		//	w.Write(resp.Marshal())
 		//	return
 		//}
-		resp.Data = enforcer.data
+		//resp.Data = enforcer.data
 		w.Write(resp.Marshal())
 	}
 }

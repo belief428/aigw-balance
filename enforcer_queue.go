@@ -32,8 +32,12 @@ func (this *EnforcerQueueData[G, T]) Call(args ...interface{}) {
 	}
 	// 最多只能执行两次
 	for i := 1; i <= triggerCount; i++ {
-		resp := this.watcher.GetRegulateCallback()(this.gateway.GetCode(), this.archive.GetCode(), this.kind, this.value)
-
+		resp := this.watcher.GetRegulateCallbackFunc()(&persist.WatcherRegulateParams{
+			Code:        this.gateway.GetCode(),
+			ArchiveCode: this.archive.GetCode(),
+			Kind:        this.kind,
+			Value:       this.value,
+		})
 		if resp.GetStatus() == 1 || i == triggerCount {
 			func(gateway persist.IGateway, archive persist.IArchive) {
 				_regulate := model.NewRegulate()
