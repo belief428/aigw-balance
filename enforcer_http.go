@@ -68,7 +68,7 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 			resp.Message = err.Error()
 		}
 	LOOP:
-		if enforcer.watcher != nil {
+		if enforcer.watcher != nil && enforcer.watcher.GetParamsCallbackFunc != nil {
 			enforcer.watcher.GetParamsCallbackFunc()(_params)
 		}
 		w.Write(resp.Marshal())
@@ -153,7 +153,6 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 func (this *Enforcer) http() {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("Aigw-balance http recover error：%v\n", err)
 			this.logger.Errorf("Aigw-balance http recover error：%v", err)
 		}
 		go this.http()

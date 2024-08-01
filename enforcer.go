@@ -7,6 +7,7 @@ import (
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/plugin"
+	"github.com/belief428/aigw-balance/utils"
 	"gorm.io/gorm"
 	"sync"
 	"time"
@@ -124,6 +125,7 @@ func (this *Enforcer) Enforcer() error {
 	//now := time.Now()
 
 	once.Do(func() {
+		utils.LoadConfig(this.params.Filepath(), this.params)
 		// 获取数据引擎
 		this.engine = orm.NewInstance().GetEngine()
 		{
