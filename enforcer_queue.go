@@ -57,7 +57,7 @@ func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
 				} else if this.kind == EnforcerKindForHorizontal { // 水平计算
 					err = _enforcerCache.saveHorizontalRegulate(gatewayCode, _regulate)
 				}
-				if err != nil {
+				if err != nil && this.logger != nil {
 					this.logger.Errorf("Aigw-balance cache save：%d error：%v", this.kind, err)
 				}
 			}(this.gatewayCode, this.archive)

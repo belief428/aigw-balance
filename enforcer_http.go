@@ -153,7 +153,7 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 func (this *Enforcer) http() {
 	defer func() {
 		if err := recover(); err != nil {
-			this.logger.Errorf("Aigw-balance http recover error：%v", err)
+			this.errorf("Aigw-balance http recover error：%v", err)
 		}
 		go this.http()
 	}()
