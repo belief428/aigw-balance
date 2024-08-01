@@ -1,5 +1,12 @@
 {
+	"mode": 1,
 	"horizontal_time": 1,
 	"name": "测试222",
-	"vertical_time": 99
+	"vertical_time": 99,
+	"gateways": [
+		{
+			"code": "11223344",
+			"name": "测试"
+		}
+	]
 }

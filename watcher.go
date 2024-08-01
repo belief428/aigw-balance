@@ -45,7 +45,14 @@ func NewWatcher() *Watcher {
 	return &Watcher{
 		getArchiveFunc: func(params *persist.WatcherArchiveParams) []persist.IArchive {
 			fmt.Println("getArchiveFunc time：", time.Now(), " code：", params.Code, " kind：", params.Kind)
-			return nil
+			_archive := NewArchive()
+			_archive.code = "12345678"
+			_archive.weight = 1.2
+			_archive.retTemp = 40
+
+			return []persist.IArchive{
+				_archive,
+			}
 		},
 		regulateCallbackFunc: func(params *persist.WatcherRegulateParams) persist.IWatchRegulate {
 			fmt.Println("regulateCallbackFunc time：", time.Now(), " code：", params.Code, " archiveCode：", params.ArchiveCode,

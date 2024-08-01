@@ -25,7 +25,7 @@ type IWatcher interface {
 	GetRegulateCallbackFunc() func(*WatcherRegulateParams) IWatchRegulate
 	// SetParamsCallbackFunc 设置参数回调函数
 	SetParamsCallbackFunc(func(params map[string]interface{}))
-	// GetParamsCallback 获取参数回调函数
+	// GetParamsCallbackFunc 获取参数回调函数
 	GetParamsCallbackFunc() func(params map[string]interface{})
 }
 

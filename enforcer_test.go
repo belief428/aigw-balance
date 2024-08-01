@@ -59,9 +59,9 @@ func TestEnforcerCache(t *testing.T) {
 	var src = &EnforcerCache{
 		locker: new(sync.RWMutex),
 	}
-	gatewaty := NewGateway()
-	gatewaty.code = "123"
-	err := src.saveHorizontalRegulate(gatewaty, model.NewRegulate())
+	gateway := NewGateway()
+	gateway.code = "123"
+	err := src.saveHorizontalRegulate(gateway.code, model.NewRegulate())
 
 	if err != nil {
 		t.Log(err)

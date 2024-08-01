@@ -2,6 +2,7 @@ package aibalance
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/belief428/aigw-balance/lib/queue"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
@@ -110,6 +111,7 @@ func (this *Enforcer) Enforcer() error {
 	once.Do(func() {
 		// 载入配置
 		utils.LoadConfig(this.params.Filepath(), this.params)
+		fmt.Println(this.params.Gateways)
 		// 载入Http
 		if this.port > 0 {
 			go this.http()

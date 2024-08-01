@@ -5,10 +5,10 @@ type Params struct {
 	Name           string `json:"name"`
 	VerticalTime   int    `json:"vertical_time"`
 	HorizontalTime int    `json:"horizontal_time"`
-	Gateway        []struct {
+	Gateways       []struct {
 		Code string `json:"code"`
 		Name string `json:"name"`
-	} `json:"gateway"`
+	} `json:"gateways"`
 }
 
 func (this *Params) Filepath() string {

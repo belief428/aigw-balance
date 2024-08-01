@@ -36,7 +36,7 @@ func (this *EnforcerCache) saveVerticalRegulate(iGateway persist.IGateway, iArch
 }
 
 // saveHorizontalRegulate 水平调控记录
-func (this *EnforcerCache) saveHorizontalRegulate(iGateway persist.IGateway, mRegulate *model.Regulate) error {
+func (this *EnforcerCache) saveHorizontalRegulate(gatewayCode string, mRegulate *model.Regulate) error {
 	//this.locker.RLock()
 	//defer this.locker.RUnlock()
 
@@ -80,7 +80,7 @@ func (this *EnforcerCache) saveHorizontalRegulate(iGateway persist.IGateway, mRe
 			return err
 		}
 	}
-	if err = writer.Write([]string{iGateway.GetCode(), mRegulate.Name, mRegulate.Code,
+	if err = writer.Write([]string{gatewayCode, mRegulate.Name, mRegulate.Code,
 		fmt.Sprintf("%.3f", mRegulate.RetTemp),
 		fmt.Sprintf("%d", mRegulate.PrevDeg), fmt.Sprintf("%d", mRegulate.NextDeg),
 		fmt.Sprintf("%d", mRegulate.Status),

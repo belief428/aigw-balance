@@ -1,6 +1,7 @@
 package aibalance
 
 import (
+	"fmt"
 	"github.com/belief428/aigw-balance/persist"
 	"time"
 )
@@ -19,27 +20,57 @@ const (
 	EnforcerKindForHorizontal
 )
 
+type Archives []persist.IArchive
+
+func (this Archives) HandleCalc(mode, limit int) (bool, uint8) {
+	var value float32
+
+	_length := len(this)
+
+	fmt.Println("-------------", _length)
+
+	if _length <= 0 {
+		return false, 0
+	}
+	report := _length
+
+	for _, v := range this {
+		if mode == EnforcerModeForZHW {
+			if v.GetRetTemp() > 0 {
+				value += v.GetRetTemp()
+				continue
+			}
+			report--
+		} else if mode == EnforcerModeForZLL {
+
+		} else {
+			return false, 0
+		}
+	}
+	if (report/_length)*100 < 100-limit {
+		return false, 0
+	}
+	return true, uint8(value / float32(_length))
+}
+
 // calc
 // @Description:
 // @param mode
 // @param data
 // @param report
 // @param limit
-// @return []persist.IArchive
+// @return bool
 // @return uint8
-func calc(mode int, data []persist.IArchive, limit int) ([]persist.IArchive, uint8) {
+func calc(mode int, data []persist.IArchive, limit int) (bool, uint8) {
 	var value float32
 
 	_length := len(data)
 
-	out := make([]persist.IArchive, 0)
-
 	if _length <= 0 {
-		return out, 0
+		return false, 0
 	}
 	report := _length
-	//|| (_length/report)*100 < 100-limit
-	// 获取数值
+
 	for _, v := range data {
 		if mode == EnforcerModeForZHW {
 			if value > 0 {
@@ -50,72 +81,82 @@ func calc(mode int, data []persist.IArchive, limit int) ([]persist.IArchive, uin
 		} else if mode == EnforcerModeForZLL {
 
 		} else {
-			return out, 0
+			return false, 0
 		}
 	}
 	if (report/_length)*100 < 100-limit {
-		return out, 0
+		return false, 0
 	}
-	return out, uint8(value / float32(_length))
+	return true, uint8(value / float32(_length))
 }
 
-// horizontal 水平计算
-func (this *Enforcer) horizontal() {
-	//builds := make([]persist.IArchive, 0)
-	//buildCount := 0
-	//
-	//for _, v := range this.data {
-	//	buildCount += v.GetBuildCount()
-	//
-	//	for _, val := range v.build {
-	//		if !val.GetRegulate() {
-	//			buildCount--
-	//			continue
-	//		}
-	//		builds = append(builds, val)
-	//	}
-	//}
-	//notices, value := calc(this.params.Mode, builds, buildCount, 13)
-	//
-	//if len(notices) <= 0 {
-	//	return
-	//}
-	//for _, v := range this.data {
-	//	for _, val := range v.build {
-	//		if !val.GetRegulate() {
-	//			continue
-	//		}
-	//		this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
-	//			gateway: v, archive: val, kind: EnforcerKindForHorizontal, value: value,
-	//			watcher: this.watcher, logger: this.logger,
-	//		})
-	//	}
-	//	//// 清空
-	//	//v.build = make([]persist.IArchive, 0)
-	//}
-	return
+func (this *Enforcer) fillCalc(archive persist.IArchive, value uint8) uint8 {
+	if archive.GetWeight() > 0 {
+		value = uint8(float32(value) * archive.GetWeight())
+	}
+	return value
 }
 
 // vertical 垂直计算
 func (this *Enforcer) vertical() {
-	// 获取档案信息
-	if this.watcher == nil || this.watcher.GetArchiveFunc == nil {
+	if this.watcher == nil {
 		return
 	}
-	notices, value := calc(this.params.Mode, this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
-		Code: "",
-		Kind: EnforcerKindForVertical,
-	}), 13)
-
-	if len(notices) <= 0 {
-		return
-	}
-	for _, val := range notices {
-		this.queue.RPush(&EnforcerQueueData[persist.IGateway, persist.IArchive]{
-			//gateway: this.data[0].IGateway,
-			archive: val, kind: EnforcerKindForVertical, value: value,
-			watcher: this.watcher, logger: this.logger,
+	for _, v := range this.params.Gateways {
+		archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+			Code: v.Code, Kind: EnforcerKindForVertical,
 		})
+		valid, value := Archives(archives).HandleCalc(this.params.Mode, 13)
+		//valid, value := calc(this.params.Mode, archives, 13)
+
+		if !valid {
+			return
+		}
+		for _, val := range archives {
+			_value := this.fillCalc(val, value)
+
+			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
+				gatewayCode: v.Code,
+				archive:     val, kind: EnforcerKindForVertical, value: _value,
+				watcher: this.watcher, logger: this.logger,
+			})
+		}
+	}
+	return
+}
+
+// horizontal 水平计算
+func (this *Enforcer) horizontal() {
+	if this.watcher == nil {
+		return
+	}
+	builds := make([]persist.IArchive, 0)
+	buildCodes := make(map[string][]persist.IArchive, 0)
+
+	for _, v := range this.params.Gateways {
+		archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+			Code: v.Code, Kind: EnforcerKindForHorizontal,
+		})
+		builds = append(builds, archives...)
+
+		buildCodes[v.Code] = archives
+	}
+	valid, value := Archives(builds).HandleCalc(this.params.Mode, 13)
+	//valid, value := calc(this.params.Mode, builds, 13)
+	fmt.Println("=====", valid, value, "-----------")
+	if !valid {
+		return
+	}
+	for key, val := range buildCodes {
+		for _, _val := range val {
+			_value := this.fillCalc(_val, value)
+
+			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
+				gatewayCode: key,
+				archive:     _val, kind: EnforcerKindForVertical, value: _value,
+				watcher: this.watcher, logger: this.logger,
+			})
+		}
 	}
 	return
 }
