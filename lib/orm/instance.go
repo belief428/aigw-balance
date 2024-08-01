@@ -135,6 +135,7 @@ func (this *Instance) GetEngine() *gorm.DB {
 
 func NewInstance(option ...Option) *Instance {
 	instance := &Instance{
+		//debug: true,
 		//handler: &Sqlite{
 		//	Path: "data", Name: "data.db",
 		//},

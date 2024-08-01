@@ -2,13 +2,16 @@ package aibalance
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
+	"gorm.io/gorm"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
+	"time"
 )
 
 type Context struct {
@@ -68,7 +71,7 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 			resp.Message = err.Error()
 		}
 	LOOP:
-		if enforcer.watcher != nil && enforcer.watcher.GetParamsCallbackFunc != nil {
+		if enforcer.watcher != nil && enforcer.watcher.GetParamsCallbackFunc() != nil {
 			enforcer.watcher.GetParamsCallbackFunc()(_params)
 		}
 		w.Write(resp.Marshal())
@@ -81,8 +84,8 @@ func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 		resp := &Response{Code: 0, Message: "ok"}
 
 		_params := &struct {
-			Code string `json:"code"`
-			Kind int    `json:"kind"`
+			GatewayCode string `json:"gateway_code"`
+			Kind        int    `json:"kind"`
 		}{}
 		_bytes, err := io.ReadAll(r.Body)
 
@@ -94,15 +97,90 @@ func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 		}
 		json.Unmarshal(_bytes, &_params)
 
-		if enforcer.watcher == nil || enforcer.watcher.GetArchiveFunc == nil {
+		if enforcer.watcher == nil || enforcer.watcher.GetArchiveFunc() == nil {
 			w.Write(resp.Marshal())
 			return
 		}
 		archives := enforcer.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
-			Code: fmt.Sprintf("%v", _params.Code),
+			Code: _params.GatewayCode,
 			Kind: _params.Kind,
 		})
 		resp.Data = archives
+		w.Write(resp.Marshal())
+	}
+}
+
+func setArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		resp := &Response{Code: 0, Message: "ok"}
+
+		_params := &struct {
+			GatewayCode string `json:"gateway_code"`
+			Code        string `json:"code"`
+			model.ArchiveAttribute
+		}{}
+		_bytes, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		json.Unmarshal(_bytes, &_params)
+
+		if _params.GatewayCode == "" || _params.Code == "" {
+			resp.Code = -1
+			resp.Message = "网关编号/档案编号不能为空"
+			w.Write(resp.Marshal())
+			return
+		}
+		mArchive := new(model.Archive)
+		// 查询数据库是否存在
+		err = enforcer.engine.Table(mArchive.TableName()).Where("gateway_code = ?", _params.GatewayCode).Where("code = ?", _params.Code).First(mArchive).Error
+
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			resp.Code = -1
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		now := time.Now()
+
+		if mArchive.ID > 0 {
+			mArchive.Attribute = _params.ArchiveAttribute
+			mArchive.UpdatedAt = now
+
+			if err = enforcer.engine.Table(mArchive.TableName()).Save(mArchive).Error; err != nil {
+				resp.Code = -1
+				resp.Message = err.Error()
+				w.Write(resp.Marshal())
+				return
+			}
+		} else {
+			fmt.Println("-----------------------------")
+			mArchive.GatewayCode = _params.GatewayCode
+			mArchive.Code = _params.Code
+			mArchive.Attribute = _params.ArchiveAttribute
+			mArchive.CreatedAt = now
+			mArchive.UpdatedAt = now
+
+			if err = enforcer.engine.Table(mArchive.TableName()).Create(mArchive).Error; err != nil {
+				resp.Code = -1
+				resp.Message = err.Error()
+				w.Write(resp.Marshal())
+				return
+			}
+		}
+		_, has := enforcer.archives[_params.GatewayCode]
+
+		if !has {
+			enforcer.archives[_params.GatewayCode] = map[string]model.ArchiveAttribute{
+				_params.GatewayCode: _params.ArchiveAttribute,
+			}
+		} else {
+			enforcer.archives[_params.GatewayCode][_params.Code] = _params.ArchiveAttribute
+		}
 		w.Write(resp.Marshal())
 	}
 }
@@ -187,6 +265,7 @@ func (this *Enforcer) http() {
 	mux.HandleFunc("/api/v1/params", getParams(this))
 	mux.HandleFunc("/api/v1/params/set", setParams(this))
 	mux.HandleFunc("/api/v1/archive", getArchive(this))
+	mux.HandleFunc("/api/v1/archive/set", setArchive(this))
 	mux.HandleFunc("/api/v1/horizontal/history", getHorizontalHistory(this))
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", this.port), mux); err != nil {

@@ -25,6 +25,8 @@ type Enforcer struct {
 
 	queue *queue.Instance
 
+	archives map[string]map[string]model.ArchiveAttribute
+
 	engine *gorm.DB
 
 	time time.Time
@@ -77,8 +79,9 @@ func NewEnforcer(options ...Option) *Enforcer {
 		params:  plugin.NewParams(),
 		watcher: NewWatcher(),
 		//data:    make([]EnforcerData[persist.IArchive], 0),
-		queue: queue.NewInstance(),
-		time:  time.Now(),
+		queue:    queue.NewInstance(),
+		archives: map[string]map[string]model.ArchiveAttribute{},
+		time:     time.Now(),
 	}
 	for _, option := range options {
 		option(_enforcer)
@@ -121,6 +124,35 @@ func (this *Enforcer) sync(model interface{}, engine string, objs interface{}) {
 	}
 }
 
+func (this *Enforcer) load() {
+	//{
+	//	_params := new(model.Params)
+	//	this.engine.Model(&model.Params{}).Where("`key` = ?", "params").First(_params)
+	//
+	//	if _params.ID > 0 {
+	//		_bytes, _ := json.Marshal(_params.Value)
+	//		json.Unmarshal(_bytes, this.params)
+	//	}
+	//}
+	{
+		_archives := make([]*model.Archive, 0)
+
+		this.engine.Table((&model.Archive{}).TableName()).Find(&_archives)
+
+		for _, v := range _archives {
+			_, has := this.archives[v.GatewayCode]
+
+			if !has {
+				this.archives[v.GatewayCode] = map[string]model.ArchiveAttribute{
+					v.GatewayCode: v.Attribute,
+				}
+			} else {
+				this.archives[v.GatewayCode][v.Code] = v.Attribute
+			}
+		}
+	}
+}
+
 func (this *Enforcer) Enforcer() error {
 	//now := time.Now()
 
@@ -137,18 +169,12 @@ func (this *Enforcer) Enforcer() error {
 			//	"created_at": now,
 			//	"updated_at": now,
 			//})
+			this.sync(&model.Archive{}, "InnoDB", nil)
 			this.sync(&model.RegulateBuild{}, "Archive", nil)
 			this.sync(&model.RegulateHouse{}, "Archive", nil)
 		}
-		//{
-		//	_params := new(model.Params)
-		//	this.engine.Model(&model.Params{}).Where("`key` = ?", "params").First(_params)
-		//
-		//	if _params.ID > 0 {
-		//		_bytes, _ := json.Marshal(_params.Value)
-		//		json.Unmarshal(_bytes, this.params)
-		//	}
-		//}
+		this.load()
+
 		_enforcerCache.engine = this.engine
 		// 载入Http
 		if this.port > 0 {

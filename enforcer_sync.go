@@ -66,7 +66,7 @@ func (this *Enforcer) fillCalc(archive persist.IArchive, value uint8) uint8 {
 
 // vertical 垂直计算
 func (this *Enforcer) vertical() {
-	if this.watcher == nil {
+	if this.watcher == nil || this.watcher.GetArchiveFunc() == nil {
 		return
 	}
 	for _, v := range this.params.Gateways {
@@ -93,7 +93,7 @@ func (this *Enforcer) vertical() {
 
 // horizontal 水平计算
 func (this *Enforcer) horizontal() {
-	if this.watcher == nil {
+	if this.watcher == nil || this.watcher.GetArchiveFunc() == nil {
 		return
 	}
 	builds := make([]persist.IArchive, 0)

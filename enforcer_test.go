@@ -10,7 +10,7 @@ import (
 )
 
 func TestNewEnforcer(t *testing.T) {
-	enforcer := NewEnforcer(WithPort(1111))
+	enforcer := NewEnforcer(WithPort(11118))
 
 	enforcer.params = &plugin.Params{
 		VerticalTime:   1,
