@@ -1,7 +1,6 @@
 package aibalance
 
 import (
-	"fmt"
 	"github.com/belief428/aigw-balance/persist"
 	"time"
 )
@@ -27,64 +26,32 @@ func (this Archives) HandleCalc(mode, limit int) (bool, uint8) {
 
 	_length := len(this)
 
-	fmt.Println("-------------", _length)
-
 	if _length <= 0 {
 		return false, 0
 	}
 	report := _length
 
 	for _, v := range this {
+		if v.GetCode() == "" {
+			goto LOOP
+		}
 		if mode == EnforcerModeForZHW {
 			if v.GetRetTemp() > 0 {
 				value += v.GetRetTemp()
 				continue
 			}
-			report--
 		} else if mode == EnforcerModeForZLL {
 
 		} else {
 			return false, 0
 		}
+	LOOP:
+		report--
 	}
 	if (report/_length)*100 < 100-limit {
 		return false, 0
 	}
-	return true, uint8(value / float32(_length))
-}
-
-// calc
-// @Description:
-// @param mode
-// @param data
-// @param report
-// @param limit
-// @return bool
-// @return uint8
-func calc(mode int, data []persist.IArchive, limit int) (bool, uint8) {
-	var value float32
-
-	_length := len(data)
-
-	if _length <= 0 {
-		return false, 0
-	}
-	report := _length
-
-	for _, v := range data {
-		if mode == EnforcerModeForZHW {
-			if value > 0 {
-				value += v.GetRetTemp()
-				continue
-			}
-			report--
-		} else if mode == EnforcerModeForZLL {
-
-		} else {
-			return false, 0
-		}
-	}
-	if (report/_length)*100 < 100-limit {
+	if value <= 0 {
 		return false, 0
 	}
 	return true, uint8(value / float32(_length))
@@ -108,7 +75,6 @@ func (this *Enforcer) vertical() {
 		})
 		valid, value := Archives(archives).HandleCalc(this.params.Mode, 13)
 		//valid, value := calc(this.params.Mode, archives, 13)
-
 		if !valid {
 			return
 		}
@@ -143,7 +109,6 @@ func (this *Enforcer) horizontal() {
 	}
 	valid, value := Archives(builds).HandleCalc(this.params.Mode, 13)
 	//valid, value := calc(this.params.Mode, builds, 13)
-	fmt.Println("=====", valid, value, "-----------")
 	if !valid {
 		return
 	}
@@ -153,7 +118,7 @@ func (this *Enforcer) horizontal() {
 
 			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
 				gatewayCode: key,
-				archive:     _val, kind: EnforcerKindForVertical, value: _value,
+				archive:     _val, kind: EnforcerKindForHorizontal, value: _value,
 				watcher: this.watcher, logger: this.logger,
 			})
 		}
@@ -210,13 +175,13 @@ func (this *Enforcer) process() {
 
 			// 垂直平衡模式
 			if this.params.VerticalTime > 0 {
-				if status := this.rule(startTime, nowTime, this.params.VerticalTime); status {
+				if valid := this.rule(startTime, nowTime, this.params.VerticalTime); valid {
 					this.vertical()
 				}
 			}
 			// 水平平衡模式
 			if this.params.HorizontalTime > 0 {
-				if status := this.rule(startTime, nowTime, this.params.HorizontalTime); status {
+				if valid := this.rule(startTime, nowTime, this.params.HorizontalTime); valid {
 					this.horizontal()
 				}
 			}

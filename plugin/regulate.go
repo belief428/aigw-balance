@@ -1,4 +1,4 @@
-package model
+package plugin
 
 import "time"
 
@@ -12,10 +12,6 @@ type Regulate struct {
 	Status    int       `json:"status"`        // 状态（-1-失败，1-成功）
 	Remark    string    `json:"remark"`        // 备注信息
 	CreatedAt time.Time `json:"created_at"`    // 调控时间
-}
-
-func (this *Regulate) Filepath() string {
-	return "data/regulate.csv"
 }
 
 func NewRegulate() *Regulate {

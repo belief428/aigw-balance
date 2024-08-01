@@ -2,11 +2,12 @@ package aibalance
 
 import (
 	"encoding/json"
-	"fmt"
+	"github.com/belief428/aigw-balance/lib/orm"
 	"github.com/belief428/aigw-balance/lib/queue"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
-	"github.com/belief428/aigw-balance/utils"
+	"github.com/belief428/aigw-balance/plugin"
+	"gorm.io/gorm"
 	"sync"
 	"time"
 )
@@ -18,10 +19,12 @@ type Enforcer struct {
 	watcher persist.IWatcher
 	logger  persist.Logger // 日志模块
 
-	params *model.Params
+	params *plugin.Params
 	//data   []EnforcerData[persist.IArchive] // 信息
 
 	queue *queue.Instance
+
+	engine *gorm.DB
 
 	time time.Time
 }
@@ -70,7 +73,7 @@ func WithLogger(logger persist.Logger) Option {
 
 func NewEnforcer(options ...Option) *Enforcer {
 	_enforcer := &Enforcer{
-		params:  model.NewParams(),
+		params:  plugin.NewParams(),
 		watcher: NewWatcher(),
 		//data:    make([]EnforcerData[persist.IArchive], 0),
 		queue: queue.NewInstance(),
@@ -107,11 +110,44 @@ func (this *Enforcer) errorf(template string, args ...interface{}) {
 	}
 }
 
+func (this *Enforcer) sync(model interface{}, engine string, objs interface{}) {
+	if !this.engine.Migrator().HasTable(model) {
+		if err := this.engine.Set("gorm:table_options", "ENGINE="+engine).AutoMigrate(model); err != nil {
+			this.errorf("Aigw-balance sync model error：%v", err)
+		} else {
+			_ = this.engine.Model(model).Create(objs).Error
+		}
+	}
+}
+
 func (this *Enforcer) Enforcer() error {
+	//now := time.Now()
+
 	once.Do(func() {
-		// 载入配置
-		utils.LoadConfig(this.params.Filepath(), this.params)
-		fmt.Println(this.params.Gateways)
+		// 获取数据引擎
+		this.engine = orm.NewInstance().GetEngine()
+		{
+			//_bytes, _ := json.Marshal(this.params)
+			////this.params
+			//this.sync(&model.Params{}, "InnoDB", map[string]interface{}{
+			//	"`key`":      "params",
+			//	"`value`":    string(_bytes),
+			//	"created_at": now,
+			//	"updated_at": now,
+			//})
+			this.sync(&model.RegulateBuild{}, "Archive", nil)
+			this.sync(&model.RegulateHouse{}, "Archive", nil)
+		}
+		//{
+		//	_params := new(model.Params)
+		//	this.engine.Model(&model.Params{}).Where("`key` = ?", "params").First(_params)
+		//
+		//	if _params.ID > 0 {
+		//		_bytes, _ := json.Marshal(_params.Value)
+		//		json.Unmarshal(_bytes, this.params)
+		//	}
+		//}
+		_enforcerCache.engine = this.engine
 		// 载入Http
 		if this.port > 0 {
 			go this.http()

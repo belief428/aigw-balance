@@ -1,8 +1,8 @@
 package aibalance
 
 import (
-	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
+	"github.com/belief428/aigw-balance/plugin"
 	"time"
 )
 
@@ -40,7 +40,7 @@ func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
 		})
 		if resp.GetStatus() == 1 || i == triggerCount {
 			func(gatewayCode string, archive persist.IArchive) {
-				_regulate := model.NewRegulate()
+				_regulate := plugin.NewRegulate()
 				_regulate.Name = archive.GetName()
 				_regulate.Code = archive.GetCode()
 				_regulate.RetTemp = archive.GetRetTemp()

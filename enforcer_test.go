@@ -2,7 +2,8 @@ package aibalance
 
 import (
 	"encoding/json"
-	"github.com/belief428/aigw-balance/model"
+	"github.com/belief428/aigw-balance/persist"
+	"github.com/belief428/aigw-balance/plugin"
 	"github.com/belief428/aigw-balance/utils"
 	"sync"
 	"testing"
@@ -11,7 +12,7 @@ import (
 func TestNewEnforcer(t *testing.T) {
 	enforcer := NewEnforcer(WithPort(1111))
 
-	enforcer.params = &model.Params{
+	enforcer.params = &plugin.Params{
 		VerticalTime:   1,
 		HorizontalTime: 2,
 	}
@@ -61,9 +62,13 @@ func TestEnforcerCache(t *testing.T) {
 	}
 	gateway := NewGateway()
 	gateway.code = "123"
-	err := src.saveHorizontalRegulate(gateway.code, model.NewRegulate())
+	err := src.saveHorizontalRegulate(gateway.code, plugin.NewRegulate())
 
 	if err != nil {
 		t.Log(err)
 	}
+	function := func(params *persist.WatcherArchiveParams) []persist.IArchive {
+		return nil
+	}
+	NewWatcher().SetArchiveFunc(function)
 }

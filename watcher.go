@@ -47,6 +47,7 @@ func NewWatcher() *Watcher {
 			fmt.Println("getArchiveFunc time：", time.Now(), " code：", params.Code, " kind：", params.Kind)
 			_archive := NewArchive()
 			_archive.code = "12345678"
+			_archive.name = "金融广场D6"
 			_archive.weight = 1.2
 			_archive.retTemp = 40
 

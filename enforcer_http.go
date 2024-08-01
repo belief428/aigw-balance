@@ -1,21 +1,24 @@
 package aibalance
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/belief428/aigw-balance/utils"
+	"github.com/belief428/aigw-balance/model"
+	"github.com/belief428/aigw-balance/persist"
 	"html/template"
 	"io"
 	"net/http"
 	"os"
-	"strings"
-	"time"
 )
 
 type Context struct {
 	*http.Request
 	http.ResponseWriter
+}
+
+type Page struct {
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
 }
 
 type Response struct {
@@ -76,15 +79,30 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &Response{Code: 0, Message: "ok"}
-		//_bytes, err := io.ReadAll(r.Body)
-		//
-		//if err != nil {
-		//	resp.Code = -1
-		//	resp.Message = err.Error()
-		//	w.Write(resp.Marshal())
-		//	return
-		//}
-		//resp.Data = enforcer.data
+
+		_params := &struct {
+			Code string `json:"code"`
+			Kind int    `json:"kind"`
+		}{}
+		_bytes, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			w.Write(resp.Marshal())
+			return
+		}
+		json.Unmarshal(_bytes, &_params)
+
+		if enforcer.watcher == nil || enforcer.watcher.GetArchiveFunc == nil {
+			w.Write(resp.Marshal())
+			return
+		}
+		archives := enforcer.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+			Code: fmt.Sprintf("%v", _params.Code),
+			Kind: _params.Kind,
+		})
+		resp.Data = archives
 		w.Write(resp.Marshal())
 	}
 }
@@ -94,54 +112,40 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp := &Response{Code: -1, Message: "ok", Data: make([]string, 0)}
 
+		pagination := &Page{Page: 1, Limit: 10}
+
 		_bytes, err := io.ReadAll(r.Body)
 
 		if err != nil {
 			resp.Message = err.Error()
-			w.Write(resp.Marshal())
 			return
 		}
-		//utils.PathExists()
-		_params := make(map[string]interface{}, 0)
-		json.Unmarshal(_bytes, &_params)
+		json.Unmarshal(_bytes, pagination)
 
-		date, has := _params["date"]
-
-		if !has {
-			date = time.Now().Format("20060102")
+		if pagination.Page <= 0 {
+			pagination.Page = 1
 		}
-		date = strings.ReplaceAll(fmt.Sprintf("%v", date), "-", "")
+		query := enforcer.engine.Table((&model.RegulateBuild{}).TableName())
 
-		filepath := fmt.Sprintf("data/regulate/horizontal/%s.csv", date)
+		var count int64
 
-		isExist, _ := utils.FileExists(filepath)
-
-		if !isExist {
-			resp.Code = 0
-			w.Write(resp.Marshal())
-			return
-		}
-		var file *os.File
-
-		if file, err = os.OpenFile(filepath, os.O_RDONLY, 0644); err != nil {
+		if err = query.Count(&count).Error; err != nil {
 			resp.Message = err.Error()
-			w.Write(resp.Marshal())
 			return
 		}
-		reader := csv.NewReader(file)
+		out := make([]*model.RegulateBuild, 0)
 
-		records := make([][]string, 0)
-
-		if records, err = reader.ReadAll(); err != nil {
+		if err = query.Offset((pagination.Page - 1) * pagination.Limit).
+			Limit(pagination.Limit).Find(&out).Error; err != nil {
 			resp.Message = err.Error()
 			w.Write(resp.Marshal())
 			return
 		}
 		resp.Code = 0
-
-		if len(records) > 1 {
-			resp.Data = records[1:]
-		}
+		resp.Data = struct {
+			Data  interface{} `json:"data"`
+			Count int64       `json:"count"`
+		}{Data: out, Count: count}
 		w.Write(resp.Marshal())
 	}
 }
@@ -149,6 +153,7 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 func (this *Enforcer) http() {
 	defer func() {
 		if err := recover(); err != nil {
+			fmt.Printf("Aigw-balance http recover error：%v\n", err)
 			this.logger.Errorf("Aigw-balance http recover error：%v", err)
 		}
 		go this.http()
