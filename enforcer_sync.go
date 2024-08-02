@@ -73,6 +73,11 @@ func (this *Enforcer) vertical() {
 		archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
 			Code: v.Code, Kind: EnforcerKindForVertical,
 		})
+		for _, val := range archives {
+			attribute := EnforcerArchive(this.archives).filter(v.Code, val.GetCode())
+			val.SetRegulate(attribute.Regulate > 0)
+			val.SetWeight(attribute.Weight)
+		}
 		valid, value := Archives(archives).HandleCalc(this.params.Mode, 13)
 		//valid, value := calc(this.params.Mode, archives, 13)
 		if !valid {
@@ -103,6 +108,11 @@ func (this *Enforcer) horizontal() {
 		archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
 			Code: v.Code, Kind: EnforcerKindForHorizontal,
 		})
+		for _, val := range archives {
+			attribute := EnforcerArchive(this.archives).filter(v.Code, val.GetCode())
+			val.SetRegulate(attribute.Regulate > 0)
+			val.SetWeight(attribute.Weight)
+		}
 		builds = append(builds, archives...)
 
 		buildCodes[v.Code] = archives

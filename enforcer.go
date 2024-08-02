@@ -32,6 +32,24 @@ type Enforcer struct {
 	time time.Time
 }
 
+type EnforcerArchive map[string]map[string]model.ArchiveAttribute
+
+func (this EnforcerArchive) filter(gatewayCode, archiveCode string) model.ArchiveAttribute {
+	out := model.ArchiveAttribute{Regulate: 1}
+
+	data, has := this[gatewayCode]
+
+	if !has {
+		return out
+	}
+	if _data, _has := data[archiveCode]; _has {
+		out = _data
+		//v.SetRegulate(_data.Regulate > 0)
+		//v.SetWeight(_data.Weight)
+	}
+	return out
+}
+
 // EnforcerData 执行者网关参数
 type EnforcerData[T persist.IArchive] struct {
 	persist.IGateway
@@ -41,11 +59,8 @@ type EnforcerData[T persist.IArchive] struct {
 
 func (this *EnforcerData[T]) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
-		"name":        this.GetName(),
-		"code":        this.GetCode(),
-		"build_count": this.GetBuildCount(),
-		"house_count": this.GetHouseCount(),
-
+		"name":   this.GetName(),
+		"code":   this.GetCode(),
 		"builds": this.build,
 		"houses": this.house,
 	}

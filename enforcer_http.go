@@ -43,7 +43,6 @@ func (this *Response) Write() {
 func getParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Write((&Response{
-			Code:    0,
 			Message: "ok",
 			Data:    enforcer.GetParams(),
 		}).Marshal())
@@ -105,6 +104,11 @@ func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 			Code: _params.GatewayCode,
 			Kind: _params.Kind,
 		})
+		for _, v := range archives {
+			attribute := EnforcerArchive(enforcer.archives).filter(_params.GatewayCode, v.GetCode())
+			v.SetRegulate(attribute.Regulate > 0)
+			v.SetWeight(attribute.Weight)
+		}
 		resp.Data = archives
 		w.Write(resp.Marshal())
 	}
@@ -158,7 +162,6 @@ func setArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 				return
 			}
 		} else {
-			fmt.Println("-----------------------------")
 			mArchive.GatewayCode = _params.GatewayCode
 			mArchive.Code = _params.Code
 			mArchive.Attribute = _params.ArchiveAttribute
@@ -213,8 +216,7 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 		}
 		out := make([]*model.RegulateBuild, 0)
 
-		if err = query.Offset((pagination.Page - 1) * pagination.Limit).
-			Limit(pagination.Limit).Find(&out).Error; err != nil {
+		if err = query.Offset((pagination.Page - 1) * pagination.Limit).Limit(pagination.Limit).Find(&out).Error; err != nil {
 			resp.Message = err.Error()
 			w.Write(resp.Marshal())
 			return

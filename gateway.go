@@ -6,10 +6,8 @@ import (
 )
 
 type Gateway struct {
-	code       string
-	name       string
-	buildCount int
-	houseCount int
+	code string
+	name string
 }
 
 // SetCode 设置编码
@@ -32,26 +30,6 @@ func (this *Gateway) GetName() string {
 	return this.name
 }
 
-// SetBuildCount 设置楼栋数，即调控参数数
-func (this *Gateway) SetBuildCount(count int) {
-	this.buildCount = count
-}
-
-// GetBuildCount 获取楼栋数，即调控参数数
-func (this *Gateway) GetBuildCount() int {
-	return this.buildCount
-}
-
-// SetHouseCount 设置户数，即调控参数数
-func (this *Gateway) SetHouseCount(count int) {
-	this.houseCount = count
-}
-
-// GetHouseCount 获取户数，即调控参数数
-func (this *Gateway) GetHouseCount() int {
-	return this.houseCount
-}
-
 //func (this *Gateway) MarshalJSON() ([]byte, error) {
 //	data := map[string]interface{}{
 //		"code": this.code, "name": this.name,
@@ -61,9 +39,7 @@ func (this *Gateway) GetHouseCount() int {
 //}
 
 func NewGateway() *Gateway {
-	return &Gateway{
-		buildCount: 1, houseCount: 1,
-	}
+	return &Gateway{}
 }
 
 // Archive 档案信息
@@ -75,8 +51,9 @@ type Archive struct {
 
 	build persist.IArchiveBuild
 
-	deg               uint8
-	retTemp, roomTemp float32
+	deg                        uint8
+	supTemp, retTemp, roomTemp float32
+	lsl, rgl                   float32
 }
 
 func (this *Archive) SetName(name string) {
@@ -127,6 +104,14 @@ func (this *Archive) GetDeg() uint8 {
 	return this.deg
 }
 
+func (this *Archive) SetSupTemp(supTemp float32) {
+	this.supTemp = supTemp
+}
+
+func (this *Archive) GetSupTemp() float32 {
+	return this.supTemp
+}
+
 func (this *Archive) SetRetTemp(value float32) {
 	this.retTemp = value
 }
@@ -141,6 +126,22 @@ func (this *Archive) SetRoomTemp(value float32) {
 
 func (this *Archive) GetRoomTemp() float32 {
 	return this.roomTemp
+}
+
+func (this *Archive) SetLsl(lsl float32) {
+	this.lsl = lsl
+}
+
+func (this *Archive) GetLsl() float32 {
+	return this.lsl
+}
+
+func (this *Archive) SetRgl(rgl float32) {
+	this.rgl = rgl
+}
+
+func (this *Archive) GetRgl() float32 {
+	return this.rgl
 }
 
 func (this *Archive) MarshalJSON() ([]byte, error) {
