@@ -44,16 +44,16 @@ func NewGateway() *Gateway {
 
 // Archive 档案信息
 type Archive struct {
-	name     string
-	code     string
-	regulate bool
-	weight   float32
-
-	build persist.IArchiveBuild
-
+	name                       string
+	code                       string
 	deg                        uint8
 	supTemp, retTemp, roomTemp float32
 	lsl, rgl                   float32
+
+	build persist.IArchiveBuild
+
+	regulate bool
+	weight   float32
 }
 
 func (this *Archive) SetName(name string) {
@@ -147,22 +147,23 @@ func (this *Archive) GetRgl() float32 {
 func (this *Archive) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
 		"name": this.name, "code": this.code,
-		"regulate": this.regulate, "weight": this.weight,
 		"build":    this.build,
-		"ret_temp": this.retTemp,
+		"sup_temp": this.supTemp, "ret_temp": this.retTemp, "avg_temp": (this.supTemp + this.retTemp) / 2,
+		"room_temp": this.roomTemp,
+		"lsl":       this.lsl, "rgl": this.rgl,
+		"regulate": this.regulate, "weight": this.weight,
 	}
 	return json.Marshal(data)
 }
 
 func NewArchive() *Archive {
-	return &Archive{
-		regulate: true,
-	}
+	return &Archive{}
 }
 
 // ArchiveBuild 档案建筑信息
 type ArchiveBuild struct {
-	area float32
+	area   float32
+	toward string
 }
 
 func (this *ArchiveBuild) SetArea(area float32) {
@@ -173,9 +174,17 @@ func (this *ArchiveBuild) GetArea() float32 {
 	return this.area
 }
 
+func (this *ArchiveBuild) SetToward(toward string) {
+	this.toward = toward
+}
+
+func (this *ArchiveBuild) GetToward() string {
+	return this.toward
+}
+
 func (this *ArchiveBuild) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
-		"area": this.area,
+		"area": this.area, "toward": this.toward,
 	}
 	return json.Marshal(data)
 }

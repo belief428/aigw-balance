@@ -1,12 +1,18 @@
 {
-	"mode": 1,
-	"horizontal_time": 5,
-	"name": "测试222",
-	"vertical_time": 99,
 	"gateways": [
 		{
 			"code": "11223344",
 			"name": "测试"
+		},
+		{
+			"code": "22331122",
+			"name": "测试"
 		}
-	]
+	],
+	"horizontal_limit": 13,
+	"horizontal_time": 10,
+	"mode": 1,
+	"name": "AI网关2",
+	"vertical_limit": 13,
+	"vertical_time": 99
 }

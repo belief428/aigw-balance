@@ -6,11 +6,14 @@ import (
 	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
+	"github.com/gin-contrib/static"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
-	"html/template"
 	"io"
 	"net/http"
 	"os"
+	"path"
+	"strings"
 	"time"
 )
 
@@ -40,23 +43,23 @@ func (this *Response) Write() {
 }
 
 // getParams 获取参数信息
-func getParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write((&Response{
+func getParams(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.JSON(http.StatusOK, &Response{
 			Message: "ok",
 			Data:    enforcer.GetParams(),
-		}).Marshal())
+		})
 	}
 }
 
 // setParams 设置参数信息
-func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func setParams(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		resp := &Response{Code: 0, Message: "ok"}
 
 		_params := make(map[string]interface{}, 0)
 
-		_bytes, err := io.ReadAll(r.Body)
+		_bytes, err := io.ReadAll(c.Request.Body)
 
 		if err != nil {
 			resp.Code = -1
@@ -73,7 +76,7 @@ func setParams(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) 
 		if enforcer.watcher != nil && enforcer.watcher.GetParamsCallbackFunc() != nil {
 			enforcer.watcher.GetParamsCallbackFunc()(_params)
 		}
-		w.Write(resp.Marshal())
+		c.JSON(http.StatusOK, resp)
 	}
 }
 
@@ -237,41 +240,56 @@ func (this *Enforcer) http() {
 		}
 		go this.http()
 	}()
-	mux := http.NewServeMux()
-	// 启动静态文件服务
-	mux.Handle("/css/", http.StripPrefix("/css/", http.FileServer(http.Dir("dist/css"))))
-	mux.Handle("/js/", http.StripPrefix("/js/", http.FileServer(http.Dir("dist/js"))))
-	mux.Handle("/favicon.ico", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		favicon, err := os.ReadFile("dist/favicon.ico")
+	gin.SetMode("release")
+	app := gin.Default()
+	app.Use(func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "access-control-allow-origin, access-control-allow-headers, application/octet-stream, text/event-stream")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "HEAD, POST, GET, OPTIONS, PATCH")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length, Access-Control-Allow-Origin, Access-Control-Allow-Headers, Content-Type")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		if err != nil {
-			http.Error(w, "File not found", http.StatusNotFound)
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
-		_, _ = w.Write(favicon)
-	}))
-	mux.HandleFunc("/admin", func(w http.ResponseWriter, r *http.Request) {
-		_template, err := template.ParseFiles("dist/index.html")
+		c.Next()
+	})
+	_catalogue := "dist"
 
-		if err != nil {
-			this.errorf("Aigw-balance http template parsefile error：%v", err)
-			return
-		}
-		if err = _template.Execute(w, nil); err != nil {
-			this.errorf("Aigw-balance http template execute error：%v", err)
-			return
+	static.Serve("/", static.LocalFile(path.Join(_catalogue, "index.html"), true))
+	app.StaticFile("/favicon.ico", path.Join(_catalogue, "favicon.ico"))
+	app.StaticFS("/static", http.Dir(path.Join(_catalogue, "static")))
+
+	app.NoRoute(func(c *gin.Context) {
+		accept := c.Request.Header.Get("Accept")
+		flag := strings.Contains(accept, "text/html")
+
+		if flag {
+			content, err := os.ReadFile("dist/index.html")
+			if err != nil {
+				c.Writer.WriteHeader(404)
+				c.Writer.WriteString("Not Found")
+				return
+			}
+			c.Writer.WriteHeader(200)
+			c.Writer.Header().Add("Accept", "text/html")
+			c.Writer.Write(content)
+			c.Writer.Flush()
 		}
 	})
-	// TODO：注入路由
-	// context := &Context{}
-	mux.HandleFunc("/api/v1/params", getParams(this))
-	mux.HandleFunc("/api/v1/params/set", setParams(this))
-	mux.HandleFunc("/api/v1/archive", getArchive(this))
-	mux.HandleFunc("/api/v1/archive/set", setArchive(this))
-	mux.HandleFunc("/api/v1/horizontal/history", getHorizontalHistory(this))
-
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", this.port), mux); err != nil {
-		this.errorf("Aigw-balance http listen error：%v", err)
-		return
+	// 注册API
+	v1 := app.Group("/api/v1")
+	{
+		v1.GET("/params", getParams(this))
+		v1.POST("/params/set", setParams(this))
 	}
+
+	serve := &http.Server{
+		Addr:           fmt.Sprintf(":%d", this.port),
+		Handler:        app,
+		MaxHeaderBytes: 1 << 20,
+	}
+	_ = serve.ListenAndServe()
 }
