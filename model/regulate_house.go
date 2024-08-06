@@ -3,11 +3,15 @@ package model
 import "time"
 
 type RegulateHouse struct {
-	ID        uint64    `gorm:"column:id;primaryKey;autoIncrement;comment:主键" json:"id" form:"id"` // 主键
-	Key       string    `gorm:"column:key;type:varchar(60);default:'';comment:唯一标识Key" json:"key"`
-	Value     string    `gorm:"column:value;type:varchar(100);default:'';comment:具体数值" json:"value"`
-	CreatedAt time.Time `gorm:"column:created_at;type:datetime;not null;comment:创建时间" json:"created_at" form:"created_at"`
-	UpdatedAt time.Time `gorm:"column:updated_at;type:datetime;not null;comment:更新时间" json:"updated_at" form:"updated_at"`
+	GatewayCode string           `gorm:"column:gateway_code;type:varchar(20);default:'';comment:网关编号" json:"gateway_code"`
+	Code        string           `gorm:"column:code;type:varchar(20);default:'';comment:设备编号" json:"code"`
+	ArchiveName string           `gorm:"column:archive_name;type:varchar(100);default:'';comment:设备名称区域" json:"archive_name"`
+	Params      []RegulateParams `gorm:"serializer:json;column:params;type:varchar(255);default:'';comment:参数信息" json:"params"`
+	PrevDeg     uint8            `gorm:"column:prev_deg;type:tinyint(1);default:0;comment:调控前开度" json:"prev_deg"`
+	NextDeg     uint8            `gorm:"column:next_deg;type:tinyint(1);default:0;comment:调控后开度" json:"next_deg"`
+	Status      int              `gorm:"column:status;type:tinyint(1);default:0;comment:状态" json:"status"`
+	Remark      string           `gorm:"column:remark;type:varchar(255);default:'';comment:备注信息" json:"remark"`
+	Date        time.Time        `gorm:"column:date;type:datetime;not null;comment:调控时间" json:"date" form:"date"`
 }
 
 func (*RegulateHouse) TableName() string {

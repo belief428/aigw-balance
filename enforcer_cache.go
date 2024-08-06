@@ -41,7 +41,7 @@ func (this *EnforcerCache) saveHorizontalRegulate(gatewayCode string, mRegulate 
 
 	return this.engine.Create(&model.RegulateBuild{
 		GatewayCode: gatewayCode,
-		Code:        mRegulate.Code,
+		ArchiveCode: mRegulate.Code,
 		ArchiveName: mRegulate.Name,
 		Params: []model.RegulateParams{
 			{

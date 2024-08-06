@@ -2,13 +2,11 @@ package aibalance
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"io"
 	"net/http"
 	"os"
@@ -81,26 +79,26 @@ func setParams(enforcer *Enforcer) gin.HandlerFunc {
 }
 
 // getArchive 获取档案信息
-func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func getArchive(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		resp := &Response{Code: 0, Message: "ok"}
 
 		_params := &struct {
-			GatewayCode string `json:"gateway_code"`
-			Kind        int    `json:"kind"`
+			GatewayCode string `json:"gateway_code" form:"gateway_code"`
+			Kind        int    `json:"kind" form:"kind"`
 		}{}
-		_bytes, err := io.ReadAll(r.Body)
+		_bytes, err := io.ReadAll(c.Request.Body)
 
 		if err != nil {
 			resp.Code = -1
 			resp.Message = err.Error()
-			w.Write(resp.Marshal())
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		json.Unmarshal(_bytes, &_params)
 
 		if enforcer.watcher == nil || enforcer.watcher.GetArchiveFunc() == nil {
-			w.Write(resp.Marshal())
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		archives := enforcer.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
@@ -113,95 +111,155 @@ func getArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request)
 			v.SetWeight(attribute.Weight)
 		}
 		resp.Data = archives
-		w.Write(resp.Marshal())
+		c.JSON(http.StatusOK, resp)
 	}
+
 }
 
-func setArchive(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+// setArchive 设置档案信息
+func setArchive(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		resp := &Response{Code: 0, Message: "ok"}
 
 		_params := &struct {
-			GatewayCode string `json:"gateway_code"`
-			Code        string `json:"code"`
+			GatewayCode string   `json:"gateway_code"`
+			Codes       []string `json:"codes"`
 			model.ArchiveAttribute
 		}{}
-		_bytes, err := io.ReadAll(r.Body)
+		_bytes, err := io.ReadAll(c.Request.Body)
 
 		if err != nil {
 			resp.Code = -1
 			resp.Message = err.Error()
-			w.Write(resp.Marshal())
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		json.Unmarshal(_bytes, &_params)
 
-		if _params.GatewayCode == "" || _params.Code == "" {
+		if _params.GatewayCode == "" || len(_params.Codes) <= 0 {
 			resp.Code = -1
 			resp.Message = "网关编号/档案编号不能为空"
-			w.Write(resp.Marshal())
+			c.JSON(http.StatusOK, resp)
 			return
 		}
+		archives := make([]*model.Archive, 0)
 		mArchive := new(model.Archive)
 		// 查询数据库是否存在
-		err = enforcer.engine.Table(mArchive.TableName()).Where("gateway_code = ?", _params.GatewayCode).Where("code = ?", _params.Code).First(mArchive).Error
+		err = enforcer.engine.Table((&model.Archive{}).TableName()).Where("gateway_code = ?", _params.GatewayCode).
+			Where("code IN (?)", _params.Codes).Find(&archives).Error
 
-		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		if err != nil {
 			resp.Code = -1
 			resp.Message = err.Error()
-			w.Write(resp.Marshal())
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		now := time.Now()
 
-		if mArchive.ID > 0 {
-			mArchive.Attribute = _params.ArchiveAttribute
-			mArchive.UpdatedAt = now
+		tx := enforcer.engine.Begin()
 
-			if err = enforcer.engine.Table(mArchive.TableName()).Save(mArchive).Error; err != nil {
-				resp.Code = -1
-				resp.Message = err.Error()
-				w.Write(resp.Marshal())
-				return
+		_archives := make(map[string]*model.Archive, 0)
+
+		for _, v := range archives {
+			_archives[v.Code] = v
+		}
+		list := make([]*model.Archive, 0)
+
+		for _, v := range _params.Codes {
+			if data, has := _archives[v]; has {
+				// 更新数据库
+				data.Attribute = _params.ArchiveAttribute
+				data.UpdatedAt = now
+
+				if err = tx.Table(mArchive.TableName()).Where("id = ?", data.ID).Updates(data).Error; err != nil {
+					tx.Rollback()
+					resp.Code = -1
+					resp.Message = err.Error()
+					c.JSON(http.StatusOK, resp)
+					return
+				}
+				continue
 			}
-		} else {
-			mArchive.GatewayCode = _params.GatewayCode
-			mArchive.Code = _params.Code
-			mArchive.Attribute = _params.ArchiveAttribute
-			mArchive.CreatedAt = now
-			mArchive.UpdatedAt = now
-
-			if err = enforcer.engine.Table(mArchive.TableName()).Create(mArchive).Error; err != nil {
+			list = append(list, &model.Archive{GatewayCode: _params.GatewayCode, Code: v,
+				Attribute: _params.ArchiveAttribute, CreatedAt: now, UpdatedAt: now,
+			})
+		}
+		if len(list) > 0 {
+			if err = tx.Table(mArchive.TableName()).CreateInBatches(list, 50).Error; err != nil {
+				tx.Rollback()
 				resp.Code = -1
 				resp.Message = err.Error()
-				w.Write(resp.Marshal())
+				c.JSON(http.StatusOK, resp)
 				return
 			}
 		}
-		_, has := enforcer.archives[_params.GatewayCode]
+		tx.Commit()
 
-		if !has {
-			enforcer.archives[_params.GatewayCode] = map[string]model.ArchiveAttribute{
-				_params.GatewayCode: _params.ArchiveAttribute,
+		for _, v := range _params.Codes {
+			_, has := enforcer.archives[_params.GatewayCode]
+
+			if !has {
+				enforcer.archives[_params.GatewayCode] = map[string]model.ArchiveAttribute{v: _params.ArchiveAttribute}
+				continue
 			}
-		} else {
-			enforcer.archives[_params.GatewayCode][_params.Code] = _params.ArchiveAttribute
+			enforcer.archives[_params.GatewayCode][v] = _params.ArchiveAttribute
 		}
-		w.Write(resp.Marshal())
+		c.JSON(http.StatusOK, resp)
 	}
 }
 
-// getHorizontalHistory 获取水平调控历史信息
-func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func setArchiveDeg(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		resp := &Response{Code: 0, Message: "ok"}
+
+		_params := &struct {
+			GatewayCode string   `json:"gateway_code"`
+			Kind        int      `json:"kind" form:"kind"`
+			Codes       []string `json:"codes"`
+			Deg         uint8    `json:"deg"`
+		}{}
+		_bytes, err := io.ReadAll(c.Request.Body)
+
+		if err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			c.JSON(http.StatusOK, resp)
+			return
+		}
+		json.Unmarshal(_bytes, &_params)
+
+		if _params.GatewayCode == "" || len(_params.Codes) <= 0 {
+			resp.Code = -1
+			resp.Message = "网关编号/档案编号不能为空"
+			c.JSON(http.StatusOK, resp)
+			return
+		}
+		if enforcer.watcher != nil && enforcer.watcher.GetRegulateCallbackFunc() != nil {
+			for _, v := range _params.Codes {
+				_ = enforcer.watcher.GetRegulateCallbackFunc()(&persist.WatcherRegulateParams{
+					Code:        _params.GatewayCode,
+					ArchiveCode: v,
+					Kind:        _params.Kind,
+					Value:       _params.Deg,
+				})
+			}
+		}
+		c.JSON(http.StatusOK, resp)
+	}
+}
+
+// getRegulate 获取调控历史信息
+func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		resp := &Response{Code: -1, Message: "ok", Data: make([]string, 0)}
 
 		pagination := &Page{Page: 1, Limit: 10}
 
-		_bytes, err := io.ReadAll(r.Body)
+		_bytes, err := io.ReadAll(c.Request.Body)
 
 		if err != nil {
 			resp.Message = err.Error()
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		json.Unmarshal(_bytes, pagination)
@@ -221,7 +279,7 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 
 		if err = query.Offset((pagination.Page - 1) * pagination.Limit).Limit(pagination.Limit).Find(&out).Error; err != nil {
 			resp.Message = err.Error()
-			w.Write(resp.Marshal())
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		resp.Code = 0
@@ -229,7 +287,7 @@ func getHorizontalHistory(enforcer *Enforcer) func(w http.ResponseWriter, r *htt
 			Data  interface{} `json:"data"`
 			Count int64       `json:"count"`
 		}{Data: out, Count: count}
-		w.Write(resp.Marshal())
+		c.JSON(http.StatusOK, resp)
 	}
 }
 
@@ -284,8 +342,11 @@ func (this *Enforcer) http() {
 	{
 		v1.GET("/params", getParams(this))
 		v1.POST("/params/set", setParams(this))
+		v1.GET("/archive", getArchive(this))
+		v1.POST("/archive/set", setArchive(this))
+		v1.POST("/archive/set_deg", setArchiveDeg(this))
+		v1.GET("/regulate", getRegulate(this))
 	}
-
 	serve := &http.Server{
 		Addr:           fmt.Sprintf(":%d", this.port),
 		Handler:        app,

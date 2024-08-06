@@ -158,9 +158,7 @@ func (this *Enforcer) load() {
 			_, has := this.archives[v.GatewayCode]
 
 			if !has {
-				this.archives[v.GatewayCode] = map[string]model.ArchiveAttribute{
-					v.GatewayCode: v.Attribute,
-				}
+				this.archives[v.GatewayCode] = map[string]model.ArchiveAttribute{v.Code: v.Attribute}
 			} else {
 				this.archives[v.GatewayCode][v.Code] = v.Attribute
 			}

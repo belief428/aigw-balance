@@ -2,15 +2,35 @@
 	"gateways": [
 		{
 			"code": "11223344",
-			"name": "测试"
+			"name": "测试1"
 		},
 		{
 			"code": "22331122",
-			"name": "测试"
+			"name": "测试2"
+		},
+		{
+			"code": "12121212",
+			"name": "测试3"
+		},
+		{
+			"code": "23232323",
+			"name": "测试4"
+		},
+		{
+			"code": "34343434",
+			"name": "测试5"
+		},
+		{
+			"code": "45454545",
+			"name": "测试6"
+		},
+		{
+			"code": "56565656",
+			"name": "测试7"
 		}
 	],
 	"horizontal_limit": 13,
-	"horizontal_time": 10,
+	"horizontal_time": 30,
 	"mode": 1,
 	"name": "AI网关2",
 	"vertical_limit": 13,

@@ -54,6 +54,7 @@ type Archive struct {
 
 	regulate bool
 	weight   float32
+	adverse  interface{}
 }
 
 func (this *Archive) SetName(name string) {
@@ -148,10 +149,11 @@ func (this *Archive) MarshalJSON() ([]byte, error) {
 	data := map[string]interface{}{
 		"name": this.name, "code": this.code,
 		"build":    this.build,
+		"deg":      this.deg,
 		"sup_temp": this.supTemp, "ret_temp": this.retTemp, "avg_temp": (this.supTemp + this.retTemp) / 2,
 		"room_temp": this.roomTemp,
 		"lsl":       this.lsl, "rgl": this.rgl,
-		"regulate": this.regulate, "weight": this.weight,
+		"regulate": this.regulate, "weight": this.weight, "adverse": this.adverse,
 	}
 	return json.Marshal(data)
 }
