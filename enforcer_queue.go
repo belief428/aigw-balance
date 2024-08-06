@@ -53,7 +53,7 @@ func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
 				var err error
 
 				if this.kind == EnforcerKindForVertical { // 垂直计算
-
+					err = _enforcerCache.saveHorizontalRegulate(gatewayCode, _regulate)
 				} else if this.kind == EnforcerKindForHorizontal { // 水平计算
 					err = _enforcerCache.saveHorizontalRegulate(gatewayCode, _regulate)
 				}

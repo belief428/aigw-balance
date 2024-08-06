@@ -23,10 +23,10 @@ func NewParams() *Params {
 	return &Params{
 		Mode:            1,
 		Name:            "AI-balance",
-		VerticalTime:    10,
-		VerticalLimit:   13,
-		HorizontalTime:  10,
-		HorizontalLimit: 13,
+		VerticalTime:    60,
+		VerticalLimit:   10,
+		HorizontalTime:  60,
+		HorizontalLimit: 10,
 		Gateways:        make([]ParamsGateway, 0),
 	}
 }

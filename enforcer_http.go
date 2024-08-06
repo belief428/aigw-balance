@@ -246,11 +246,15 @@ func setArchiveDeg(enforcer *Enforcer) gin.HandlerFunc {
 // getRegulate 获取调控历史信息
 func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resp := &Response{Code: -1, Message: "ok", Data: make([]string, 0)}
-
-		pagination := &Page{Page: 1, Limit: 10}
-
-		err := c.ShouldBindQuery(pagination)
+		resp := &Response{Code: -1, Message: "ok", Data: struct {
+			Data  interface{} `json:"data"`
+			Count int64       `json:"count"`
+		}{}}
+		_params := &struct {
+			Kind int `json:"kind" form:"kind"`
+			Page
+		}{}
+		err := c.ShouldBindQuery(_params)
 
 		if err != nil {
 			resp.Code = -1
@@ -258,7 +262,18 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 			c.JSON(http.StatusOK, resp)
 			return
 		}
-		query := enforcer.engine.Table((&model.RegulateBuild{}).TableName())
+		var iModel persist.IModel
+
+		var out interface{}
+
+		if _params.Kind == 1 {
+			iModel = new(model.RegulateHouse)
+			out = make([]*model.RegulateHouse, 0)
+		} else {
+			iModel = new(model.RegulateBuild)
+			out = make([]*model.RegulateBuild, 0)
+		}
+		query := enforcer.engine.Table(iModel.TableName())
 
 		var count int64
 
@@ -266,9 +281,7 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 			resp.Message = err.Error()
 			return
 		}
-		out := make([]*model.RegulateBuild, 0)
-
-		if err = query.Offset((pagination.Page - 1) * pagination.Limit).Limit(pagination.Limit).Find(&out).Error; err != nil {
+		if err = query.Offset((_params.Page.Page - 1) * _params.Limit).Limit(_params.Limit).Find(&out).Error; err != nil {
 			resp.Message = err.Error()
 			c.JSON(http.StatusOK, resp)
 			return

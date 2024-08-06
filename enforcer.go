@@ -8,7 +8,6 @@ import (
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/plugin"
 	"github.com/belief428/aigw-balance/utils"
-	"gorm.io/gorm"
 	"sync"
 	"time"
 )
@@ -27,7 +26,7 @@ type Enforcer struct {
 
 	archives map[string]map[string]model.ArchiveAttribute
 
-	engine *gorm.DB
+	engine *orm.Engine
 
 	time time.Time
 }
@@ -131,9 +130,17 @@ func (this *Enforcer) errorf(template string, args ...interface{}) {
 
 func (this *Enforcer) sync(model interface{}, engine string, objs interface{}) {
 	if !this.engine.Migrator().HasTable(model) {
-		if err := this.engine.Set("gorm:table_options", "ENGINE="+engine).AutoMigrate(model); err != nil {
-			this.errorf("Aigw-balance sync model error：%v", err)
+		if this.engine.Mode == "Mysql" {
+			if err := this.engine.Set("gorm:table_options", "ENGINE="+engine).AutoMigrate(model); err != nil {
+				this.errorf("Aigw-balance sync model error：%v", err)
+				return
+			}
 		} else {
+			if err := this.engine.AutoMigrate(model); err != nil {
+				this.errorf("Aigw-balance sync model error：%v", err)
+			}
+		}
+		if objs != nil {
 			_ = this.engine.Model(model).Create(objs).Error
 		}
 	}

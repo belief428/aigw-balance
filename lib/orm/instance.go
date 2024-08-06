@@ -28,12 +28,12 @@ func (this *Mysql) DSN() gorm.Dialector {
 	))
 }
 
-type Sqlite struct {
-	Path, Name string
+func (this *Mysql) Mode() string {
+	return "Mysql"
 }
 
-type IEngine interface {
-	DSN() gorm.Dialector
+type Sqlite struct {
+	Path, Name string
 }
 
 func (this *Sqlite) DSN() gorm.Dialector {
@@ -45,8 +45,22 @@ func (this *Sqlite) DSN() gorm.Dialector {
 	return sqlite.Open(url)
 }
 
+func (this *Sqlite) Mode() string {
+	return "Sqlite"
+}
+
+type IEngine interface {
+	DSN() gorm.Dialector
+	Mode() string
+}
+
+type Engine struct {
+	*gorm.DB
+	Mode string
+}
+
 type Instance struct {
-	engine *gorm.DB
+	engine *Engine
 
 	debug                                   bool
 	tablePrefix                             string
@@ -125,19 +139,22 @@ func (this *Instance) init() *Instance {
 	_db.SetMaxIdleConns(this.maxIdleConns)
 	_db.SetMaxOpenConns(this.maxOpenConns)
 	_db.SetConnMaxLifetime(time.Duration(this.maxLifetime) * time.Second)
-	this.engine = db
+	this.engine = &Engine{
+		DB:   db,
+		Mode: this.handler.Mode(),
+	}
 	return this
 }
 
-func (this *Instance) GetEngine() *gorm.DB {
+func (this *Instance) GetEngine() *Engine {
 	return this.engine
 }
 
 func NewInstance(option ...Option) *Instance {
 	instance := &Instance{
-		//debug: true,
+		debug: true,
 		handler: &Sqlite{
-			Path: "data", Name: "data.db",
+			Path: "data", Name: "app.db",
 		},
 		//handler: &Mysql{
 		//	Address:    "127.0.0.1:3306",

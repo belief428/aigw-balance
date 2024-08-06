@@ -4,7 +4,7 @@ import "time"
 
 type RegulateHouse struct {
 	GatewayCode string           `gorm:"column:gateway_code;type:varchar(20);default:'';comment:网关编号" json:"gateway_code"`
-	Code        string           `gorm:"column:code;type:varchar(20);default:'';comment:设备编号" json:"code"`
+	ArchiveCode string           `gorm:"column:archive_code;type:varchar(20);default:'';comment:设备编号" json:"archive_code"`
 	ArchiveName string           `gorm:"column:archive_name;type:varchar(100);default:'';comment:设备名称区域" json:"archive_name"`
 	Params      []RegulateParams `gorm:"serializer:json;column:params;type:varchar(255);default:'';comment:参数信息" json:"params"`
 	PrevDeg     uint8            `gorm:"column:prev_deg;type:tinyint(1);default:0;comment:调控前开度" json:"prev_deg"`

@@ -78,7 +78,7 @@ func (this *Enforcer) vertical() {
 			val.SetRegulate(attribute.Regulate > 0)
 			val.SetWeight(attribute.Weight)
 		}
-		valid, value := Archives(archives).HandleCalc(this.params.Mode, 13)
+		valid, value := Archives(archives).HandleCalc(this.params.Mode, this.params.VerticalLimit)
 		//valid, value := calc(this.params.Mode, archives, 13)
 		if !valid {
 			return
@@ -117,7 +117,7 @@ func (this *Enforcer) horizontal() {
 
 		buildCodes[v.Code] = archives
 	}
-	valid, value := Archives(builds).HandleCalc(this.params.Mode, 13)
+	valid, value := Archives(builds).HandleCalc(this.params.Mode, this.params.HorizontalLimit)
 	//valid, value := calc(this.params.Mode, builds, 13)
 	if !valid {
 		return
