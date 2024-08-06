@@ -246,10 +246,8 @@ func setArchiveDeg(enforcer *Enforcer) gin.HandlerFunc {
 // getRegulate 获取调控历史信息
 func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resp := &Response{Code: -1, Message: "ok", Data: struct {
-			Data  interface{} `json:"data"`
-			Count int64       `json:"count"`
-		}{}}
+		resp := &Response{Code: -1, Message: "ok"}
+
 		_params := &struct {
 			Kind int `json:"kind" form:"kind"`
 			Page
@@ -279,6 +277,7 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 
 		if err = query.Count(&count).Error; err != nil {
 			resp.Message = err.Error()
+			c.JSON(http.StatusOK, resp)
 			return
 		}
 		if err = query.Offset((_params.Page.Page - 1) * _params.Limit).Limit(_params.Limit).Find(&out).Error; err != nil {
@@ -303,7 +302,7 @@ func (this *Enforcer) http() {
 		go this.http()
 	}()
 	gin.SetMode("release")
-	app := gin.Default()
+	app := gin.New()
 	app.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -318,6 +317,8 @@ func (this *Enforcer) http() {
 		}
 		c.Next()
 	})
+	app.Use(gin.Recovery())
+
 	_catalogue := "dist"
 
 	static.Serve("/", static.LocalFile(path.Join(_catalogue, "index.html"), true))
