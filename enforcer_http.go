@@ -21,8 +21,8 @@ type Context struct {
 }
 
 type Page struct {
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
+	Page  int `json:"page" form:"page"`
+	Limit int `json:"limit" form:"limit"`
 }
 
 type Response struct {
@@ -87,16 +87,12 @@ func getArchive(enforcer *Enforcer) gin.HandlerFunc {
 			GatewayCode string `json:"gateway_code" form:"gateway_code"`
 			Kind        int    `json:"kind" form:"kind"`
 		}{}
-		_bytes, err := io.ReadAll(c.Request.Body)
-
-		if err != nil {
+		if err := c.ShouldBindQuery(_params); err != nil {
 			resp.Code = -1
 			resp.Message = err.Error()
 			c.JSON(http.StatusOK, resp)
 			return
 		}
-		json.Unmarshal(_bytes, &_params)
-
 		if enforcer.watcher == nil || enforcer.watcher.GetArchiveFunc() == nil {
 			c.JSON(http.StatusOK, resp)
 			return
@@ -113,7 +109,6 @@ func getArchive(enforcer *Enforcer) gin.HandlerFunc {
 		resp.Data = archives
 		c.JSON(http.StatusOK, resp)
 	}
-
 }
 
 // setArchive 设置档案信息
@@ -255,17 +250,13 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 
 		pagination := &Page{Page: 1, Limit: 10}
 
-		_bytes, err := io.ReadAll(c.Request.Body)
+		err := c.ShouldBindQuery(pagination)
 
 		if err != nil {
+			resp.Code = -1
 			resp.Message = err.Error()
 			c.JSON(http.StatusOK, resp)
 			return
-		}
-		json.Unmarshal(_bytes, pagination)
-
-		if pagination.Page <= 0 {
-			pagination.Page = 1
 		}
 		query := enforcer.engine.Table((&model.RegulateBuild{}).TableName())
 
