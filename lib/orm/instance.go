@@ -153,16 +153,16 @@ func (this *Instance) GetEngine() *Engine {
 func NewInstance(option ...Option) *Instance {
 	instance := &Instance{
 		//debug: true,
-		//handler: &Sqlite{
-		//	Path: "data", Name: "app.db",
-		//},
-		handler: &Mysql{
-			Address:    "127.0.0.1:3306",
-			Username:   "appuser",
-			Password:   "ABCabc01",
-			Database:   "aigw_balance",
-			Parameters: "charset=utf8&loc=Local&parseTime=true",
+		handler: &Sqlite{
+			Path: "data", Name: "app.db",
 		},
+		//handler: &Mysql{
+		//	Address:    "127.0.0.1:3306",
+		//	Username:   "appuser",
+		//	Password:   "ABCabc01",
+		//	Database:   "aigw_balance",
+		//	Parameters: "charset=utf8&loc=Local&parseTime=true",
+		//},
 		maxLifetime:  3600,
 		maxOpenConns: 200,
 		maxIdleConns: 100,
