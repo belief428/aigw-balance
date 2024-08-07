@@ -37,7 +37,7 @@ func (this *EnforcerCache) saveVerticalRegulate(gatewayCode string, mRegulate *p
 		GatewayCode: gatewayCode,
 		ArchiveCode: mRegulate.Code,
 		ArchiveName: mRegulate.Name,
-		Params: []model.RegulateParams{
+		Params: []model.RegulateParam{
 			{
 				Key:   "ret_temp",
 				Title: "回温",
@@ -61,7 +61,7 @@ func (this *EnforcerCache) saveHorizontalRegulate(gatewayCode string, mRegulate 
 		GatewayCode: gatewayCode,
 		ArchiveCode: mRegulate.Code,
 		ArchiveName: mRegulate.Name,
-		Params: []model.RegulateParams{
+		Params: []model.RegulateParam{
 			{
 				Key:   "ret_temp",
 				Title: "回温",

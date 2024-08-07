@@ -1,12 +1,15 @@
 package aibalance
 
 import (
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"io"
 	"net/http"
 	"os"
@@ -280,7 +283,7 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 			c.JSON(http.StatusOK, resp)
 			return
 		}
-		if err = query.Offset((_params.Page.Page - 1) * _params.Limit).Limit(_params.Limit).Find(&out).Error; err != nil {
+		if err = query.Offset((_params.Page.Page - 1) * _params.Limit).Limit(_params.Limit).Order("date DESC").Find(&out).Error; err != nil {
 			resp.Message = err.Error()
 			c.JSON(http.StatusOK, resp)
 			return
@@ -291,6 +294,66 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 			Count int64       `json:"count"`
 		}{Data: out, Count: count}
 		c.JSON(http.StatusOK, resp)
+	}
+}
+
+// downloadRegulate 下载调控历史信息
+func downloadRegulate(enforcer *Enforcer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		resp := &Response{Code: -1, Message: "ok"}
+
+		_params := &struct {
+			Kind int `json:"kind" form:"kind"`
+			Page
+		}{}
+		err := c.ShouldBindBodyWith(_params, binding.JSON)
+
+		if err != nil {
+			resp.Code = -1
+			resp.Message = err.Error()
+			c.JSON(http.StatusOK, resp)
+			return
+		}
+		var iModel persist.IModel
+		var out interface{}
+
+		if _params.Kind == 1 {
+			iModel = new(model.RegulateHouse)
+			out = make([]*model.RegulateHouse, 0)
+		} else {
+			iModel = new(model.RegulateBuild)
+			out = make([]*model.RegulateBuild, 0)
+		}
+		if err = enforcer.engine.Table(iModel.TableName()).Offset((_params.Page.Page - 1) * _params.Limit).Order("date DESC").Limit(_params.Limit).Find(&out).Error; err != nil {
+			resp.Message = err.Error()
+			c.JSON(http.StatusOK, resp)
+			return
+		}
+		buff := new(bytes.Buffer)
+		_, _ = buff.WriteString("\xEF\xBB\xBF")
+		//创建一个新的写入文件流
+		writer := csv.NewWriter(buff)
+		writer.Write([]string{"网关编号", "设备编号", "所属区域", "调控前开度", "调控后开度", "额外参数", "调控状态", "调控时间", "备注信息"})
+
+		if _params.Kind == 1 {
+			for _, v := range out.([]*model.RegulateHouse) {
+				data := []string{v.GatewayCode, v.ArchiveCode, v.ArchiveName, fmt.Sprintf("%d", v.PrevDeg), fmt.Sprintf("%d", v.NextDeg),
+					model.RegulateParams(v.Params).ToString(), v.Date.Format("2006-01-02 15:04:05"), v.Remark}
+				writer.Write(data)
+			}
+		} else {
+			for _, v := range out.([]*model.RegulateBuild) {
+				data := []string{v.GatewayCode, v.ArchiveCode, v.ArchiveName, fmt.Sprintf("%d", v.PrevDeg), fmt.Sprintf("%d", v.NextDeg),
+					model.RegulateParams(v.Params).ToString(), v.Date.Format("2006-01-02 15:04:05"), v.Remark}
+				writer.Write(data)
+			}
+		}
+		writer.Flush()
+
+		c.Header("Content-Type", "application/octet-stream")
+		c.Header("Content-Disposition", "attachment; filename=调控历史.csv")
+		c.Header("Content-Transfer-Encoding", "binary")
+		c.Data(http.StatusOK, "application/octet-stream", buff.Bytes())
 	}
 }
 
@@ -330,7 +393,7 @@ func (this *Enforcer) http() {
 		flag := strings.Contains(accept, "text/html")
 
 		if flag {
-			content, err := os.ReadFile("dist/index.html")
+			content, err := os.ReadFile(path.Join(_catalogue, "index.html"))
 			if err != nil {
 				c.Writer.WriteHeader(404)
 				c.Writer.WriteString("Not Found")
@@ -351,6 +414,7 @@ func (this *Enforcer) http() {
 		v1.POST("/archive/set", setArchive(this))
 		v1.POST("/archive/set_deg", setArchiveDeg(this))
 		v1.GET("/regulate", getRegulate(this))
+		v1.POST("/regulate/download", downloadRegulate(this))
 	}
 	serve := &http.Server{
 		Addr:           fmt.Sprintf(":%d", this.port),
