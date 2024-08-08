@@ -381,6 +381,19 @@ func (this *Enforcer) http() {
 		c.Next()
 	})
 	app.Use(gin.Recovery())
+	//app.Use(func(c *gin.Context) {
+	//	ctx, cancel := context.WithTimeout(c.Request.Context(), 60)
+	//
+	//	defer func() {
+	//		if ctx.Err() == context.DeadlineExceeded {
+	//			c.Writer.WriteHeader(http.StatusGatewayTimeout)
+	//			c.Abort()
+	//		}
+	//		cancel()
+	//	}()
+	//	c.Request = c.Request.WithContext(ctx)
+	//	c.Next()
+	//})
 
 	_catalogue := "dist"
 

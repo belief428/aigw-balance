@@ -7,7 +7,6 @@ import (
 	"github.com/belief428/aigw-balance/plugin"
 	"io"
 	"sync"
-	"time"
 )
 
 type EnforcerCache struct {
@@ -30,9 +29,8 @@ var _enforcerCache = &EnforcerCache{
 
 // saveVerticalRegulate 垂直调控记录
 func (this *EnforcerCache) saveVerticalRegulate(gatewayCode string, mRegulate *plugin.Regulate) error {
-	this.locker.Lock()
-	defer this.locker.Unlock()
-
+	//this.locker.Lock()
+	//defer this.locker.Unlock()
 	return this.engine.Create(&model.RegulateHouse{
 		GatewayCode: gatewayCode,
 		ArchiveCode: mRegulate.Code,
@@ -48,15 +46,14 @@ func (this *EnforcerCache) saveVerticalRegulate(gatewayCode string, mRegulate *p
 		NextDeg: mRegulate.NextDeg,
 		Status:  mRegulate.Status,
 		Remark:  mRegulate.Remark,
-		Date:    time.Now(),
+		Date:    mRegulate.CreatedAt,
 	}).Error
 }
 
 // saveHorizontalRegulate 水平调控记录
 func (this *EnforcerCache) saveHorizontalRegulate(gatewayCode string, mRegulate *plugin.Regulate) error {
-	this.locker.Lock()
-	defer this.locker.Unlock()
-
+	//this.locker.Lock()
+	//defer this.locker.Unlock()
 	return this.engine.Create(&model.RegulateBuild{
 		GatewayCode: gatewayCode,
 		ArchiveCode: mRegulate.Code,
@@ -72,6 +69,6 @@ func (this *EnforcerCache) saveHorizontalRegulate(gatewayCode string, mRegulate 
 		NextDeg: mRegulate.NextDeg,
 		Status:  mRegulate.Status,
 		Remark:  mRegulate.Remark,
-		Date:    time.Now(),
+		Date:    mRegulate.CreatedAt,
 	}).Error
 }

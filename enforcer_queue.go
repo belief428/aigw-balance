@@ -27,7 +27,7 @@ func (this *EnforcerQueueData[T]) Delay() int {
 }
 
 func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
-	if this.watcher == nil {
+	if this.watcher == nil || this.watcher.GetRegulateCallbackFunc() == nil {
 		return
 	}
 	// 最多只能执行两次
@@ -38,7 +38,7 @@ func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
 			Kind:        this.kind,
 			Value:       this.value,
 		})
-		if resp.GetStatus() == 1 || i == triggerCount {
+		if (resp != nil && resp.GetStatus() == 1) || i == triggerCount {
 			func(gatewayCode string, archive persist.IArchive) {
 				_regulate := plugin.NewRegulate()
 				_regulate.Name = archive.GetName()
@@ -46,14 +46,19 @@ func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
 				_regulate.RetTemp = archive.GetRetTemp()
 				_regulate.PrevDeg = archive.GetDeg()
 				_regulate.NextDeg = this.value
-				_regulate.Status = resp.GetStatus()
-				_regulate.Remark = resp.GetRemark()
+				_regulate.Status = -1
+				_regulate.Remark = "通讯失败"
+
+				if resp != nil {
+					_regulate.Status = resp.GetStatus()
+					_regulate.Remark = resp.GetRemark()
+				}
 				_regulate.CreatedAt = time.Now()
 
 				var err error
 
 				if this.kind == EnforcerKindForVertical { // 垂直计算
-					err = _enforcerCache.saveHorizontalRegulate(gatewayCode, _regulate)
+					err = _enforcerCache.saveVerticalRegulate(gatewayCode, _regulate)
 				} else if this.kind == EnforcerKindForHorizontal { // 水平计算
 					err = _enforcerCache.saveHorizontalRegulate(gatewayCode, _regulate)
 				}

@@ -2,11 +2,15 @@ package aibalance
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/belief428/aigw-balance/lib/orm"
+	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/plugin"
 	"github.com/belief428/aigw-balance/utils"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestNewEnforcer(t *testing.T) {
@@ -71,4 +75,31 @@ func TestEnforcerCache(t *testing.T) {
 		return nil
 	}
 	NewWatcher().SetArchiveFunc(function)
+}
+
+func TestEnforceOrm(t *testing.T) {
+	func(a int) {
+		t.Log(a)
+	}(1)
+	return
+	_orm := orm.NewInstance()
+
+	err := _orm.GetEngine().Create(&model.RegulateBuild{
+		GatewayCode: "88372100",
+		ArchiveCode: "11223344",
+		ArchiveName: "测试",
+		Params: []model.RegulateParam{
+			{
+				Key:   "ret_temp",
+				Title: "回温",
+				Value: fmt.Sprintf("%.3f", 11.22),
+			},
+		},
+		PrevDeg: 11,
+		NextDeg: 22,
+		Status:  1,
+		Remark:  "测试",
+		Date:    time.Now(),
+	}).Error
+	t.Log(err)
 }
