@@ -32,7 +32,8 @@ func (this Archives) HandleCalc(mode, limit int) (bool, uint8) {
 	report := _length
 
 	for _, v := range this {
-		if v.GetCode() == "" {
+		if !v.GetRegulate() || v.GetCode() == "" {
+			_length -= 1
 			goto LOOP
 		}
 		if mode == EnforcerModeForZHW {
@@ -47,6 +48,9 @@ func (this Archives) HandleCalc(mode, limit int) (bool, uint8) {
 		}
 	LOOP:
 		report--
+	}
+	if report <= 0 {
+		return false, 0
 	}
 	if (report/_length)*100 < 100-limit {
 		return false, 0
@@ -84,6 +88,9 @@ func (this *Enforcer) vertical() {
 			return
 		}
 		for _, val := range archives {
+			if !val.GetRegulate() || val.GetCode() == "" {
+				continue
+			}
 			_value := this.fillCalc(val, value)
 
 			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
@@ -124,6 +131,9 @@ func (this *Enforcer) horizontal() {
 	}
 	for key, val := range buildCodes {
 		for _, _val := range val {
+			if !_val.GetRegulate() || _val.GetCode() == "" {
+				continue
+			}
 			_value := this.fillCalc(_val, value)
 
 			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
@@ -186,13 +196,13 @@ func (this *Enforcer) process() {
 			// 垂直平衡模式
 			if this.params.VerticalTime > 0 {
 				if valid := this.rule(startTime, nowTime, this.params.VerticalTime); valid {
-					this.vertical()
+					go this.vertical()
 				}
 			}
 			// 水平平衡模式
 			if this.params.HorizontalTime > 0 {
 				if valid := this.rule(startTime, nowTime, this.params.HorizontalTime); valid {
-					this.horizontal()
+					go this.horizontal()
 				}
 			}
 		}

@@ -12,8 +12,8 @@ type Archive struct {
 }
 
 type ArchiveAttribute struct {
-	Regulate int     `json:"regulate"`
-	Weight   float32 `json:"weight"`
+	Regulate int     `json:"regulate" form:"regulate"`
+	Weight   float32 `json:"weight" form:"weight"`
 }
 
 func (*Archive) TableName() string {

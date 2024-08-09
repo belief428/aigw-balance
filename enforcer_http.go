@@ -169,7 +169,7 @@ func setArchive(enforcer *Enforcer) gin.HandlerFunc {
 				data.Attribute = _params.ArchiveAttribute
 				data.UpdatedAt = now
 
-				if err = tx.Table(mArchive.TableName()).Where("id = ?", data.ID).Updates(data).Error; err != nil {
+				if err = tx.Table(mArchive.TableName()).Where("id = ?", data.ID).Save(data).Error; err != nil {
 					tx.Rollback()
 					resp.Code = -1
 					resp.Message = err.Error()
@@ -183,7 +183,7 @@ func setArchive(enforcer *Enforcer) gin.HandlerFunc {
 			})
 		}
 		if len(list) > 0 {
-			if err = tx.Table(mArchive.TableName()).CreateInBatches(list, 50).Error; err != nil {
+			if err = tx.Table(mArchive.TableName()).CreateInBatches(list, 100).Error; err != nil {
 				tx.Rollback()
 				resp.Code = -1
 				resp.Message = err.Error()
