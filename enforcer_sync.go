@@ -115,6 +115,7 @@ func (this *Enforcer) horizontal() {
 	buildCodes := make(map[string][]persist.IArchive, 0)
 	// 等待锁
 	var wg sync.WaitGroup
+	var complete = true
 
 	for _, v := range this.params.Gateways {
 		wg.Add(1)
@@ -125,6 +126,9 @@ func (this *Enforcer) horizontal() {
 			archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
 				Code: code, Kind: EnforcerKindForHorizontal,
 			})
+			if len(archives) <= 0 {
+				complete = false
+			}
 			for _, val := range archives {
 				attribute := EnforcerArchive(this.archives).filter(code, val.GetCode())
 				val.SetRegulate(attribute.Regulate > 0)
@@ -136,19 +140,10 @@ func (this *Enforcer) horizontal() {
 	}
 	// 等待锁结束
 	wg.Wait()
-	//for _, v := range this.params.Gateways {
-	//	archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
-	//		Code: v.Code, Kind: EnforcerKindForHorizontal,
-	//	})
-	//	for _, val := range archives {
-	//		attribute := EnforcerArchive(this.archives).filter(v.Code, val.GetCode())
-	//		val.SetRegulate(attribute.Regulate > 0)
-	//		val.SetWeight(attribute.Weight)
-	//	}
-	//	builds = append(builds, archives...)
-	//
-	//	buildCodes[v.Code] = archives
-	//}
+	// 其中一个网关无法读取到数据，直接不执行后续操作
+	if !complete {
+		return
+	}
 	valid, value := Archives(builds).HandleCalc(this.params.Mode, this.params.HorizontalLimit)
 	//valid, value := calc(this.params.Mode, builds, 13)
 	if !valid {
