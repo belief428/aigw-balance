@@ -1,8 +1,10 @@
 package aibalance
 
 import (
+	"github.com/belief428/aigw-balance/lib/queue"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/plugin"
+	"sync"
 	"time"
 )
 
@@ -16,7 +18,17 @@ type EnforcerQueueData[T persist.IArchive] struct {
 	logger  persist.Logger
 }
 
+type EnforcerQueues struct {
+	queue  *queue.Instance
+	caches map[string]uint8
+
+	logger persist.Logger
+	locker *sync.RWMutex
+}
+
 var triggerCount = 2
+
+var queues = make(map[string]*EnforcerQueues, 0)
 
 func (this *EnforcerQueueData[T]) Priority() int {
 	return 0
@@ -71,24 +83,39 @@ func (this *EnforcerQueueData[T]) Call(args ...interface{}) {
 	}
 }
 
-// consume 开启队列
-func (this *Enforcer) consume() {
-	if this.queue == nil {
-		return
-	}
+func (this *EnforcerQueues) consume() {
 	defer func() {
 		if err := recover(); err != nil {
-			this.errorf("Aigw-balance consume recover error：%v", err)
+			if this.logger != nil {
+				this.logger.Errorf("Aigw-balance consume recover error：%v", err)
+			}
 		}
 		go this.consume()
 	}()
 	for {
-		_queue := this.queue.LPop()
+		_data := this.queue.LPop()
 
-		if _queue == nil {
-			time.Sleep(time.Second)
+		if _data == nil {
+			time.Sleep(500 * time.Millisecond)
 			continue
 		}
-		_queue.Call()
+		_data.Call()
 	}
+}
+
+func (this *Enforcer) push(data *EnforcerQueueData[persist.IArchive]) {
+	obj, has := queues[data.gatewayCode]
+
+	if !has {
+		queues[data.gatewayCode] = &EnforcerQueues{
+			queue:  queue.NewInstance(),
+			caches: make(map[string]uint8, 0),
+			logger: this.logger,
+			locker: new(sync.RWMutex),
+		}
+		go queues[data.gatewayCode].consume()
+		queues[data.gatewayCode].queue.RPush(data)
+		return
+	}
+	obj.queue.RPush(data)
 }

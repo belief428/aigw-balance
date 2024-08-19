@@ -103,3 +103,21 @@ func TestEnforceOrm(t *testing.T) {
 	}).Error
 	t.Log(err)
 }
+
+func TestEnforcerWg(t *testing.T) {
+	var wg sync.WaitGroup
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+
+		go func(code int) {
+			defer wg.Done()
+
+			time.Sleep(time.Duration(code) * time.Second)
+
+			t.Log("执行了：", code)
+		}(i)
+	}
+	wg.Wait()
+	t.Log("终于到我了")
+}

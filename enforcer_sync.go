@@ -2,6 +2,7 @@ package aibalance
 
 import (
 	"github.com/belief428/aigw-balance/persist"
+	"sync"
 	"time"
 )
 
@@ -74,31 +75,33 @@ func (this *Enforcer) vertical() {
 		return
 	}
 	for _, v := range this.params.Gateways {
-		archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
-			Code: v.Code, Kind: EnforcerKindForVertical,
-		})
-		for _, val := range archives {
-			attribute := EnforcerArchive(this.archives).filter(v.Code, val.GetCode())
-			val.SetRegulate(attribute.Regulate > 0)
-			val.SetWeight(attribute.Weight)
-		}
-		valid, value := Archives(archives).HandleCalc(this.params.Mode, this.params.VerticalLimit)
-		//valid, value := calc(this.params.Mode, archives, 13)
-		if !valid {
-			return
-		}
-		for _, val := range archives {
-			if !val.GetRegulate() || val.GetCode() == "" {
-				continue
-			}
-			_value := this.fillCalc(val, value)
-
-			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
-				gatewayCode: v.Code,
-				archive:     val, kind: EnforcerKindForVertical, value: _value,
-				watcher: this.watcher, logger: this.logger,
+		go func(code string) {
+			archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+				Code: code, Kind: EnforcerKindForVertical,
 			})
-		}
+			for _, val := range archives {
+				attribute := EnforcerArchive(this.archives).filter(code, val.GetCode())
+				val.SetRegulate(attribute.Regulate > 0)
+				val.SetWeight(attribute.Weight)
+			}
+			valid, value := Archives(archives).HandleCalc(this.params.Mode, this.params.VerticalLimit)
+			//valid, value := calc(this.params.Mode, archives, 13)
+			if !valid {
+				return
+			}
+			for _, val := range archives {
+				if !val.GetRegulate() || val.GetCode() == "" {
+					continue
+				}
+				_value := this.fillCalc(val, value)
+
+				this.push(&EnforcerQueueData[persist.IArchive]{
+					gatewayCode: code,
+					archive:     val, kind: EnforcerKindForVertical, value: _value,
+					watcher: this.watcher, logger: this.logger,
+				})
+			}
+		}(v.Code)
 	}
 	return
 }
@@ -110,20 +113,42 @@ func (this *Enforcer) horizontal() {
 	}
 	builds := make([]persist.IArchive, 0)
 	buildCodes := make(map[string][]persist.IArchive, 0)
+	// 等待锁
+	var wg sync.WaitGroup
 
 	for _, v := range this.params.Gateways {
-		archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
-			Code: v.Code, Kind: EnforcerKindForHorizontal,
-		})
-		for _, val := range archives {
-			attribute := EnforcerArchive(this.archives).filter(v.Code, val.GetCode())
-			val.SetRegulate(attribute.Regulate > 0)
-			val.SetWeight(attribute.Weight)
-		}
-		builds = append(builds, archives...)
+		wg.Add(1)
 
-		buildCodes[v.Code] = archives
+		go func(builds *[]persist.IArchive, buildCodes *map[string][]persist.IArchive, code string) {
+			defer wg.Done()
+
+			archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+				Code: code, Kind: EnforcerKindForHorizontal,
+			})
+			for _, val := range archives {
+				attribute := EnforcerArchive(this.archives).filter(code, val.GetCode())
+				val.SetRegulate(attribute.Regulate > 0)
+				val.SetWeight(attribute.Weight)
+			}
+			*builds = append(*builds, archives...)
+			(*buildCodes)[code] = archives
+		}(&builds, &buildCodes, v.Code)
 	}
+	// 等待锁结束
+	wg.Wait()
+	//for _, v := range this.params.Gateways {
+	//	archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
+	//		Code: v.Code, Kind: EnforcerKindForHorizontal,
+	//	})
+	//	for _, val := range archives {
+	//		attribute := EnforcerArchive(this.archives).filter(v.Code, val.GetCode())
+	//		val.SetRegulate(attribute.Regulate > 0)
+	//		val.SetWeight(attribute.Weight)
+	//	}
+	//	builds = append(builds, archives...)
+	//
+	//	buildCodes[v.Code] = archives
+	//}
 	valid, value := Archives(builds).HandleCalc(this.params.Mode, this.params.HorizontalLimit)
 	//valid, value := calc(this.params.Mode, builds, 13)
 	if !valid {
@@ -136,7 +161,7 @@ func (this *Enforcer) horizontal() {
 			}
 			_value := this.fillCalc(_val, value)
 
-			this.queue.RPush(&EnforcerQueueData[persist.IArchive]{
+			this.push(&EnforcerQueueData[persist.IArchive]{
 				gatewayCode: key,
 				archive:     _val, kind: EnforcerKindForHorizontal, value: _value,
 				watcher: this.watcher, logger: this.logger,

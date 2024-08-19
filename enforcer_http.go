@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
+	"github.com/belief428/aigw-balance/utils"
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
@@ -394,30 +395,31 @@ func (this *Enforcer) http() {
 	//	c.Request = c.Request.WithContext(ctx)
 	//	c.Next()
 	//})
-
 	_catalogue := "dist"
 
-	static.Serve("/", static.LocalFile(path.Join(_catalogue, "index.html"), true))
-	app.StaticFile("/favicon.ico", path.Join(_catalogue, "favicon.ico"))
-	app.StaticFS("/static", http.Dir(path.Join(_catalogue, "static")))
+	if isExist, _ := utils.PathExists(_catalogue); isExist {
+		static.Serve("/", static.LocalFile(path.Join(_catalogue, "index.html"), true))
+		app.StaticFile("/favicon.ico", path.Join(_catalogue, "favicon.ico"))
+		app.StaticFS("/static", http.Dir(path.Join(_catalogue, "static")))
 
-	app.NoRoute(func(c *gin.Context) {
-		accept := c.Request.Header.Get("Accept")
-		flag := strings.Contains(accept, "text/html")
+		app.NoRoute(func(c *gin.Context) {
+			accept := c.Request.Header.Get("Accept")
+			flag := strings.Contains(accept, "text/html")
 
-		if flag {
-			content, err := os.ReadFile(path.Join(_catalogue, "index.html"))
-			if err != nil {
-				c.Writer.WriteHeader(404)
-				c.Writer.WriteString("Not Found")
-				return
+			if flag {
+				content, err := os.ReadFile(path.Join(_catalogue, "index.html"))
+				if err != nil {
+					c.Writer.WriteHeader(404)
+					c.Writer.WriteString("Not Found")
+					return
+				}
+				c.Writer.WriteHeader(200)
+				c.Writer.Header().Add("Accept", "text/html")
+				c.Writer.Write(content)
+				c.Writer.Flush()
 			}
-			c.Writer.WriteHeader(200)
-			c.Writer.Header().Add("Accept", "text/html")
-			c.Writer.Write(content)
-			c.Writer.Flush()
-		}
-	})
+		})
+	}
 	// 注册API
 	v1 := app.Group("/api/v1")
 	{

@@ -3,7 +3,6 @@ package aibalance
 import (
 	"encoding/json"
 	"github.com/belief428/aigw-balance/lib/orm"
-	"github.com/belief428/aigw-balance/lib/queue"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/persist"
 	"github.com/belief428/aigw-balance/plugin"
@@ -21,8 +20,6 @@ type Enforcer struct {
 
 	params *plugin.Params
 	//data   []EnforcerData[persist.IArchive] // 信息
-
-	queue *queue.Instance
 
 	archives map[string]map[string]model.ArchiveAttribute
 
@@ -93,7 +90,6 @@ func NewEnforcer(options ...Option) *Enforcer {
 		params:  plugin.NewParams(),
 		watcher: NewWatcher(),
 		//data:    make([]EnforcerData[persist.IArchive], 0),
-		queue:    queue.NewInstance(),
 		archives: map[string]map[string]model.ArchiveAttribute{},
 		time:     time.Now(),
 	}
@@ -202,8 +198,6 @@ func (this *Enforcer) Enforcer() error {
 		}
 		// 载入进程
 		go this.process()
-		// 载入队列
-		go this.consume()
 	})
 	return nil
 }
