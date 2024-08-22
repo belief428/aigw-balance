@@ -76,6 +76,11 @@ func (this *Enforcer) vertical() {
 	}
 	for _, v := range this.params.Gateways {
 		go func(code string) {
+			defer func() {
+				if err := recover(); err != nil {
+					this.errorf("Aigw-balance vertical get archiveFunc error：%v", err)
+				}
+			}()
 			archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
 				Code: code, Kind: EnforcerKindForVertical,
 			})
@@ -121,8 +126,12 @@ func (this *Enforcer) horizontal() {
 		wg.Add(1)
 
 		go func(builds *[]persist.IArchive, buildCodes *map[string][]persist.IArchive, code string) {
-			defer wg.Done()
-
+			defer func() {
+				if err := recover(); err != nil {
+					this.errorf("Aigw-balance horizontal get archiveFunc error：%v", err)
+				}
+				wg.Done()
+			}()
 			archives := this.watcher.GetArchiveFunc()(&persist.WatcherArchiveParams{
 				Code: code, Kind: EnforcerKindForHorizontal,
 			})
