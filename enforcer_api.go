@@ -29,3 +29,7 @@ func (this *Enforcer) SetParams(params map[string]interface{}) error {
 func (this *Enforcer) GetParams() map[string]interface{} {
 	return utils.StructToMap(this.params)
 }
+
+func (this *Enforcer) GetVersion() string {
+	return Version
+}

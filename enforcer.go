@@ -28,6 +28,11 @@ type Enforcer struct {
 	time time.Time
 }
 
+const (
+	// Version 版本号
+	Version string = "1.1.1"
+)
+
 type EnforcerArchive map[string]map[string]model.ArchiveAttribute
 
 func (this EnforcerArchive) filter(gatewayCode, archiveCode string) model.ArchiveAttribute {
