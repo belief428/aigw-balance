@@ -2,6 +2,7 @@ package aibalance
 
 import (
 	"github.com/belief428/aigw-balance/persist"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -22,13 +23,18 @@ const (
 
 type Archives []persist.IArchive
 
-func (this Archives) HandleCalc(mode, limit int) (bool, uint8) {
+var _rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func (this Archives) HandleCalc(enforcer *Enforcer, mode, limit int) (bool, uint8) {
 	var value float32
 
 	_length := len(this)
 
 	if _length <= 0 {
 		return false, 0
+	}
+	if enforcer.debug {
+		return true, uint8(_rand.Intn(100))
 	}
 	report := _length
 
@@ -89,7 +95,7 @@ func (this *Enforcer) vertical() {
 				val.SetRegulate(attribute.Regulate > 0)
 				val.SetWeight(attribute.Weight)
 			}
-			valid, value := Archives(archives).HandleCalc(this.params.Mode, this.params.VerticalLimit)
+			valid, value := Archives(archives).HandleCalc(this, this.params.Mode, this.params.VerticalLimit)
 			//valid, value := calc(this.params.Mode, archives, 13)
 			if !valid {
 				return
@@ -153,7 +159,7 @@ func (this *Enforcer) horizontal() {
 	if !complete {
 		return
 	}
-	valid, value := Archives(builds).HandleCalc(this.params.Mode, this.params.HorizontalLimit)
+	valid, value := Archives(builds).HandleCalc(this, this.params.Mode, this.params.HorizontalLimit)
 	//valid, value := calc(this.params.Mode, builds, 13)
 	if !valid {
 		return

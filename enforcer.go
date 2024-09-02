@@ -13,6 +13,8 @@ import (
 
 // Enforcer 执行者
 type Enforcer struct {
+	debug bool
+
 	port int // 端口
 
 	watcher persist.IWatcher
@@ -71,6 +73,12 @@ func (this *EnforcerData[T]) MarshalJSON() ([]byte, error) {
 var once sync.Once
 
 type Option func(enforcer *Enforcer)
+
+func WithDebug(debug bool) Option {
+	return func(enforcer *Enforcer) {
+		enforcer.debug = debug
+	}
+}
 
 func WithPort(port int) Option {
 	return func(enforcer *Enforcer) {
