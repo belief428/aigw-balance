@@ -32,7 +32,7 @@ type Enforcer struct {
 
 const (
 	// Version 版本号
-	Version string = "1.1.1"
+	Version string = "1.1.2"
 )
 
 type EnforcerArchive map[string]map[string]model.ArchiveAttribute
