@@ -44,7 +44,7 @@ func (this Archives) HandleCalc(debug bool, mode, limit int) (bool, uint8) {
 			goto LOOP
 		}
 		if mode == EnforcerModeForZHW {
-			if v.GetRetTemp() > 0 {
+			if v.GetRetTemp() > 0 && v.GetRetTemp() < 90 {
 				value += v.GetRetTemp()
 				continue
 			}

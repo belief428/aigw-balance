@@ -121,3 +121,27 @@ func TestEnforcerWg(t *testing.T) {
 	wg.Wait()
 	t.Log("终于到我了")
 }
+
+func TestTime(t *testing.T) {
+	local, _ := time.LoadLocation("Local")
+	now := time.Date(2024, 9, 6, 0, 0, 0, 0, local)
+	t.Log(now)
+	befor := now.AddDate(0, 0, -3)
+	t.Log(befor)
+
+	var err error
+
+	engine := orm.NewInstance().GetEngine()
+
+	if err = engine.Where("date < ?", befor).Delete(&model.RegulateBuild{}).Error; err != nil {
+		t.Logf("Aigw-balance crontab regulate build error：%v", err)
+	}
+	if err = engine.Where("date < ?", befor).Delete(&model.RegulateHouse{}).Error; err != nil {
+		t.Logf("Aigw-balance crontab regulate house error：%v", err)
+	}
+	if engine.Mode == "Sqlite" {
+		if err = engine.Exec("VACUUM").Error; err != nil {
+			t.Logf("Aigw-balance crontab vacuum error：%v", err)
+		}
+	}
+}

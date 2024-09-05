@@ -211,6 +211,8 @@ func (this *Enforcer) Enforcer() error {
 		}
 		// 载入进程
 		go this.process()
+		// 开启Crontab
+		go this.crontab()
 	})
 	return nil
 }
