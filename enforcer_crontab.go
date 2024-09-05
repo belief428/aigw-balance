@@ -1,7 +1,6 @@
 package aibalance
 
 import (
-	"fmt"
 	"github.com/belief428/aigw-balance/model"
 	"github.com/belief428/aigw-balance/utils"
 	"time"
@@ -22,8 +21,6 @@ func (this *Enforcer) crontab() {
 		select {
 		case <-ticket.C:
 			now := time.Now()
-
-			fmt.Println(now, utils.IsDawn(now))
 
 			if utils.IsDawn(now) {
 				// 删除多余的日志
