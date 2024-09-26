@@ -253,7 +253,9 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 		resp := &Response{Code: -1, Message: "ok"}
 
 		_params := &struct {
-			Kind int `json:"kind" form:"kind"`
+			Kind        int    `json:"kind" form:"kind"`
+			GatewayCode string `json:"gateway_code" form:"gateway_code"`
+			ArchiveCode string `json:"archive_code" form:"archive_code"`
 			Page
 		}{}
 		err := c.ShouldBindQuery(_params)
@@ -277,6 +279,12 @@ func getRegulate(enforcer *Enforcer) gin.HandlerFunc {
 		}
 		query := enforcer.engine.Table(iModel.TableName())
 
+		if _params.GatewayCode != "" {
+			query = query.Where("gateway_code = ?", _params.GatewayCode)
+		}
+		if _params.ArchiveCode != "" {
+			query = query.Where("archive_code = ?", _params.ArchiveCode)
+		}
 		var count int64
 
 		if err = query.Count(&count).Error; err != nil {
